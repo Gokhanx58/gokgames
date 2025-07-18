@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GokGames - En İyi Oyunlar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 0;
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            border-bottom: 2px solid #fff3;
+        }
+
+        .header h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 0 20px #fff;
+            letter-spacing: 2px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .main-content {
+            margin-top: 140px;
+            min-height: calc(100vh - 140px);
+            padding: 2rem;
+        }
+
+        .home-screen {
+            display: block;
+            text-align: center;
+        }
+
+        .welcome-text {
+            font-size: 1.8rem;
+            margin-bottom: 3rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: #fff;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .game-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .game-card p {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .game-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .game-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 0 auto;
+            max-width: 800px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+
+        .control-btn.muted {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .score-display {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .game-canvas {
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .game-info {
+            margin-top: 1rem;
+            color: #ccc;
+        }
+
+        .message {
+            font-size: 2rem;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .win-message {
+            color: #4ecdc4;
+        }
+
+        .lose-message {
+            color: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            .games-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .game-card {
+                padding: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 GokGames</h1>
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="showHome()">🏠 Ana Sayfa</button>
+            <button class="nav-btn" onclick="showGame('current')" id="currentGameBtn" style="display: none;">🎯 Oyuna Dön</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Ana Sayfa -->
+        <div id="home" class="home-screen">
+            <div class="welcome-text">
+                <h2>🎮 En İyi Oyunlar Burada! 🎮</h2>
+                <p>Klasik arcade oyunlarını oyna, eğlen ve rekoru kır!</p>
+            </div>
+            
+            <div class="games-grid">
+                <div class="game-card" onclick="showGame('snake')">
+                    <h3>🐍 Snake</h3>
+                    <p>Yılanın büyüyerek elma toplama oyunu. Duvara çarpma!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('pong')">
+                    <h3>🏓 Pong</h3>
+                    <p>İki raketli klasik top oyunu. Bilgisayara karşı oyna!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('tictactoe')">
+                    <h3>❌ Tic-Tac-Toe</h3>
+                    <p>3x3 X-O oyunu. Üç tane yan yana getirmeye çalış!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('breakout')">
+                    <h3>🧱 Breakout</h3>
+                    <p>Topla tuğla kırma oyunu. Tüm tuğlaları yok et!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('flappybird')">
+                    <h3>🐦 Flappy Bird</h3>
+                    <p>Engellerden kaçınma oyunu. Olabildiğince uzağa git!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('memory')">
+                    <h3>🧠 Memory</h3>
+                    <p>Eş kartları bulma oyunu. Hafızanı test et!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('pacman')">
+                    <h3>👻 Pac-Man</h3>
+                    <p>Labirent oyunu. Noktaları topla, hayaletlerden kaç!</p>
+                </div>
+                
+                <div class="game-card" onclick="showGame('coming')">
+                    <h3>🚀 Diğer Oyunlar</h3>
+                    <p>Tetris, 2048, Space Invaders yakında geliyor!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Oyun Ekranları -->
+        <div id="gameScreen" class="game-screen">
+            <div class="game-container">
+                <div class="game-controls">
+                    <button class="control-btn" onclick="toggleSound()" id="soundBtn">🔊 Ses Açık</button>
+                    <button class="control-btn" onclick="newGame()" id="newGameBtn">🎮 Yeni Oyun</button>
+                </div>
+                
+                <div class="score-display" id="scoreDisplay">Puan: 0</div>
+                
+                <canvas id="gameCanvas" class="game-canvas" width="600" height="400"></canvas>
+                
+                <div class="game-info" id="gameInfo">
+                    Ok tuşları ile oyna
+                </div>
+                
+                <div id="gameMessage" class="message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Oyun sistemi
+        let currentGame = null;
+        let gameState = {};
+        let soundEnabled = true;
+        let animationId = null;
+        let gameInterval = null;
+        
+        // Ses sistemi
+        let audioContext = null;
+        
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        function playSound(frequency, duration, type = 'sine') {
+            if (!soundEnabled) return;
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // Navigasyon
+        function showHome() {
+            document.getElementById('home').style.display = 'block';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('currentGameBtn').style.display = 'none';
+            cleanupGame();
+        }
+
+        function showGame(gameName) {
+            if (gameName === 'current' && currentGame) {
+                gameName = currentGame;
+            }
+            
+            if (gameName === 'coming') {
+                alert('Bu oyunlar yakında gelecek! 🎮');
+                return;
+            }
+            
+            document.getElementById('home').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('currentGameBtn').style.display = 'inline-block';
+            
+            cleanupGame();
+            currentGame = gameName;
+            initGame(gameName);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundBtn');
+            if (soundEnabled) {
+                btn.textContent = '🔊 Ses Açık';
+                btn.classList.remove('muted');
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            } else {
+                btn.textContent = '🔇 Ses Kapalı';
+                btn.classList.add('muted');
+            }
+        }
+
+        function newGame() {
+            if (currentGame) {
+                cleanupGame();
+                initGame(currentGame);
+            }
+        }
+
+        function cleanupGame() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+            document.getElementById('gameMessage').style.display = 'none';
+        }
+
+        function updateScore(score) {
+            document.getElementById('scoreDisplay').textContent = `Puan: ${score}`;
+        }
+
+        function showMessage(text, type = 'info') {
+            const messageEl = document.getElementById('gameMessage');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Oyun başlatma
+        function initGame(gameName) {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const infoEl = document.getElementById('gameInfo');
+            
+            // Canvas'ı temizle
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Oyun başlat
+            switch(gameName) {
+                case 'snake':
+                    infoEl.textContent = 'Ok tuşları ile yılanı kontrol et';
+                    initSnake(canvas, ctx);
+                    break;
+                case 'pong':
+                    infoEl.textContent = 'Ok tuşları ile raketi kontrol et';
+                    initPong(canvas, ctx);
+                    break;
+                case 'tictactoe':
+                    infoEl.textContent = 'Fareyle tıkla ve oyna';
+                    initTicTacToe(canvas, ctx);
+                    break;
+                case 'breakout':
+                    infoEl.textContent = 'Sol/Sağ ok tuşları ile raketi kontrol et';
+                    initBreakout(canvas, ctx);
+                    break;
+                case 'flappybird':
+                    infoEl.textContent = 'Boşluk tuşu ile kuşu zıplat';
+                    initFlappyBird(canvas, ctx);
+                    break;
+                case 'memory':
+                    infoEl.textContent = 'Kartları tıklayarak eşlerini bul';
+                    initMemory(canvas, ctx);
+                    break;
+                case 'pacman':
+                    infoEl.textContent = 'Ok tuşları ile Pac-Man\'i kontrol et';
+                    initPacman(canvas, ctx);
+                    break;
+            }
+            
+            updateScore(0);
+        }
+
+        // SNAKE OYUNU
+        function initSnake(canvas, ctx) {
+            const GRID_SIZE = 20;
+            const GRID_WIDTH = canvas.width / GRID_SIZE;
+            const GRID_HEIGHT = canvas.height / GRID_SIZE;
+            
+            gameState = {
+                snake: [{x: 10, y: 10}],
+                food: {x: 15, y: 15},
+                dx: 0,
+                dy: 0,
+                score: 0,
+                gameOver: false
+            };
+            
+            function generateFood() {
+                gameState.food = {
+                    x: Math.floor(Math.random() * GRID_WIDTH),
+                    y: Math.floor(Math.random() * GRID_HEIGHT)
+                };
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Yılan çiz
+                gameState.snake.forEach((segment, index) => {
+                    ctx.fillStyle = index === 0 ? '#2E7D32' : '#4CAF50';
+                    ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+                });
+                
+                // Yiyecek çiz
+                ctx.fillStyle = '#FF5722';
+                ctx.fillRect(gameState.food.x * GRID_SIZE, gameState.food.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+            }
+            
+            function update() {
+                if (gameState.gameOver) return;
+                
+                const head = {x: gameState.snake[0].x + gameState.dx, y: gameState.snake[0].y + gameState.dy};
+                
+                // Duvar çarpışması
+                if (head.x < 0 || head.x >= GRID_WIDTH || head.y < 0 || head.y >= GRID_HEIGHT) {
+                    gameState.gameOver = true;
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    playSound(200, 0.5);
+                    return;
+                }
+                
+                // Kendine çarpışma
+                if (gameState.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    gameState.gameOver = true;
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    playSound(200, 0.5);
+                    return;
+                }
+                
+                gameState.snake.unshift(head);
+                
+                // Yiyecek yeme
+                if (head.x === gameState.food.x && head.y === gameState.food.y) {
+                    gameState.score += 10;
+                    updateScore(gameState.score);
+                    generateFood();
+                    playSound(600, 0.1);
+                } else {
+                    gameState.snake.pop();
+                }
+                
+                draw();
+            }
+            
+            // Kontroller
+            document.addEventListener('keydown', (e) => {
+                if (gameState.gameOver) return;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        if (gameState.dy === 0) { gameState.dx = 0; gameState.dy = -1; }
+                        break;
+                    case 'ArrowDown':
+                        if (gameState.dy === 0) { gameState.dx = 0; gameState.dy = 1; }
+                        break;
+                    case 'ArrowLeft':
+                        if (gameState.dx === 0) { gameState.dx = -1; gameState.dy = 0; }
+                        break;
+                    case 'ArrowRight':
+                        if (gameState.dx === 0) { gameState.dx = 1; gameState.dy = 0; }
+                        break;
+                }
+            });
+            
+            generateFood();
+            draw();
+            gameInterval = setInterval(update, 150);
+        }
+
+        // PONG OYUNU
+        function initPong(canvas, ctx) {
+            gameState = {
+                paddle: { x: 10, y: canvas.height / 2 - 40, width: 10, height: 80 },
+                aiPaddle: { x: canvas.width - 20, y: canvas.height / 2 - 40, width: 10, height: 80 },
+                ball: { x: canvas.width / 2, y: canvas.height / 2, dx: 5, dy: 3, radius: 8 },
+                score: 0,
+                aiScore: 0,
+                keys: {}
+            };
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Orta çizgi
+                ctx.strokeStyle = '#fff';
+                ctx.setLineDash([5, 15]);
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 0);
+                ctx.lineTo(canvas.width / 2, canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Raketler
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(gameState.paddle.x, gameState.paddle.y, gameState.paddle.width, gameState.paddle.height);
+                ctx.fillRect(gameState.aiPaddle.x, gameState.aiPaddle.y, gameState.aiPaddle.width, gameState.aiPaddle.height);
+                
+                // Top
+                ctx.beginPath();
+                ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Skor
+                ctx.font = '24px Arial';
+                ctx.fillText(gameState.score, canvas.width / 4, 30);
+                ctx.fillText(gameState.aiScore, 3 * canvas.width / 4, 30);
+            }
+            
+            function update() {
+                // Raket hareket
+                if (gameState.keys['ArrowUp'] && gameState.paddle.y > 0) {
+                    gameState.paddle.y -= 7;
+                }
+                if (gameState.keys['ArrowDown'] && gameState.paddle.y < canvas.height - gameState.paddle.height) {
+                    gameState.paddle.y += 7;
+                }
+                
+                // AI raket
+                const aiCenter = gameState.aiPaddle.y + gameState.aiPaddle.height / 2;
+                if (aiCenter < gameState.ball.y - 35) {
+                    gameState.aiPaddle.y += 4;
+                } else if (aiCenter > gameState.ball.y + 35) {
+                    gameState.aiPaddle.y -= 4;
+                }
+                
+                // Top hareket
+                gameState.ball.x += gameState.ball.dx;
+                gameState.ball.y += gameState.ball.dy;
+                
+                // Üst alt duvar çarpışması
+                if (gameState.ball.y <= gameState.ball.radius || gameState.ball.y >= canvas.height - gameState.ball.radius) {
+                    gameState.ball.dy = -gameState.ball.dy;
+                    playSound(400, 0.1);
+                }
+                
+                // Raket çarpışması
+                if (gameState.ball.x <= gameState.paddle.x + gameState.paddle.width &&
+                    gameState.ball.y >= gameState.paddle.y &&
+                    gameState.ball.y <= gameState.paddle.y + gameState.paddle.height) {
+                    gameState.ball.dx = -gameState.ball.dx;
+                    playSound(600, 0.1);
+                }
+                
+                if (gameState.ball.x >= gameState.aiPaddle.x &&
+                    gameState.ball.y >= gameState.aiPaddle.y &&
+                    gameState.ball.y <= gameState.aiPaddle.y + gameState.aiPaddle.height) {
+                    gameState.ball.dx = -gameState.ball.dx;
+                    playSound(600, 0.1);
+                }
+                
+                // Gol
+                if (gameState.ball.x < 0) {
+                    gameState.aiScore++;
+                    resetBall();
+                    playSound(300, 0.3);
+                }
+                
+                if (gameState.ball.x > canvas.width) {
+                    gameState.score++;
+                    updateScore(gameState.score);
+                    resetBall();
+                    playSound(800, 0.3);
+                }
+                
+                draw();
+            }
+            
+            function resetBall() {
+                gameState.ball.x = canvas.width / 2;
+                gameState.ball.y = canvas.height / 2;
+                gameState.ball.dx = -gameState.ball.dx;
+            }
+            
+            // Kontroller
+            document.addEventListener('keydown', (e) => {
+                gameState.keys[e.key] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                gameState.keys[e.key] = false;
+            });
+            
+            draw();
+            gameInterval = setInterval(update, 16);
+        }
+
+        // TIC-TAC-TOE OYUNU
+        function initTicTacToe(canvas, ctx) {
+            gameState = {
+                board: Array(9).fill(''),
+                currentPlayer: 'X',
+                gameOver: false,
+                winner: null
+            };
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Grid çiz
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                
+                // Dikey çizgiler
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 3, 0);
+                ctx.lineTo(canvas.width / 3, canvas.height);
+                ctx.moveTo(2 * canvas.width / 3, 0);
+                ctx.lineTo(2 * canvas.width / 3, canvas.height);
+                ctx.stroke();
+                
+                // Yatay çizgiler
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height / 3);
+                ctx.lineTo(canvas.width, canvas.height / 3);
+                ctx.moveTo(0, 2 * canvas.height / 3);
+                ctx.lineTo(canvas.width, 2 * canvas.height / 3);
+                ctx.stroke();
+                
+                // X ve O'ları çiz
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                for (let i = 0; i < 9; i++) {
+                    if (gameState.board[i]) {
+                        const x = (i % 3) * (canvas.width / 3) + (canvas.width / 6);
+                        const y = Math.floor(i / 3) * (canvas.height / 3) + (canvas.height / 6);
+                        
+                        ctx.fillStyle = gameState.board[i] === 'X' ? '#ff6b6b' : '#4ecdc4';
+                        ctx.fillText(gameState.board[i], x, y);
+                    }
+                }
+            }
+            
+            function checkWinner() {
+                const winPatterns = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Yatay
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Dikey
+                    [0, 4, 8], [2, 4, 6] // Çapraz
+                ];
+                
+                for (let pattern of winPatterns) {
+                    const [a, b, c] = pattern;
+                    if (gameState.board[a] && gameState.board[a] === gameState.board[b] && gameState.board[a] === gameState.board[c]) {
+                        return gameState.board[a];
+                    }
+                }
+                
+                return gameState.board.includes('') ? null : 'tie';
+            }
+            
+            function makeMove(index) {
+                if (gameState.board[index] || gameState.gameOver) return;
+                
+                gameState.board[index] = gameState.currentPlayer;
+                
+                const winner = checkWinner();
+                if (winner) {
+                    gameState.gameOver = true;
+                    gameState.winner = winner;
+                    if (winner === 'tie') {
+                        showMessage('Berabere!', 'info');
+                    } else {
+                        showMessage(winner + ' Kazandı!', 'win-message');
+                        updateScore(gameState.score + 10);
+                    }
+                    playSound(800, 0.3);
+                } else {
+                    gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+                    playSound(600, 0.1);
+                }
+                
+                draw();
+            }
+            
+            // Fare tıklama
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const cellX = Math.floor(x / (canvas.width / 3));
+                const cellY = Math.floor(y / (canvas.height / 3));
+                const index = cellY * 3 + cellX;
+                
+                makeMove(index);
+            });
+            
+            draw();
+        }
+
+        // BREAKOUT OYUNU
+        function initBreakout(canvas, ctx) {
+            gameState = {
+                paddle: { x: canvas.width / 2 - 50, y: canvas.height - 30, width: 100, height: 10 },
+                ball: { x: canvas.width / 2, y: canvas.height - 50, dx: 5, dy: -5, radius: 8 },
+                bricks: [],
+                score: 0,
+                keys: {}
+            };
+            
+            // Tuğlaları oluştur
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 10; col++) {
+                    gameState.bricks.push({
+                        x: col * 60 + 30,
+                        y: row * 30 + 50,
+                        width: 50,
+                        height: 20,
+                        destroyed: false
+                    });
+                }
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Tuğlalar
+                gameState.bricks.forEach(brick => {
+                    if (!brick.destroyed) {
+                        ctx.fillStyle = '#ff6b6b';
+                        ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                    }
+                });
+                
+                // Raket
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(gameState.paddle.x, gameState.paddle.y, gameState.paddle.width, gameState.paddle.height);
+                
+                // Top
+                ctx.beginPath();
+                ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            function update() {
+                // Raket hareket
+                if (gameState.keys['ArrowLeft'] && gameState.paddle.x > 0) {
+                    gameState.paddle.x -= 8;
+                }
+                if (gameState.keys['ArrowRight'] && gameState.paddle.x < canvas.width - gameState.paddle.width) {
+                    gameState.paddle.x += 8;
+                }
+                
+                // Top hareket
+                gameState.ball.x += gameState.ball.dx;
+                gameState.ball.y += gameState.ball.dy;
+                
+                // Duvar çarpışması
+                if (gameState.ball.x <= gameState.ball.radius || gameState.ball.x >= canvas.width - gameState.ball.radius) {
+                    gameState.ball.dx = -gameState.ball.dx;
+                    playSound(400, 0.1);
+                }
+                
+                if (gameState.ball.y <= gameState.ball.radius) {
+                    gameState.ball.dy = -gameState.ball.dy;
+                    playSound(400, 0.1);
+                }
+                
+                // Raket çarpışması
+                if (gameState.ball.x >= gameState.paddle.x &&
+                    gameState.ball.x <= gameState.paddle.x + gameState.paddle.width &&
+                    gameState.ball.y >= gameState.paddle.y &&
+                    gameState.ball.y <= gameState.paddle.y + gameState.paddle.height) {
+                    gameState.ball.dy = -gameState.ball.dy;
+                    playSound(600, 0.1);
+                }
+                
+                // Tuğla çarpışması
+                gameState.bricks.forEach(brick => {
+                    if (!brick.destroyed &&
+                        gameState.ball.x >= brick.x &&
+                        gameState.ball.x <= brick.x + brick.width &&
+                        gameState.ball.y >= brick.y &&
+                        gameState.ball.y <= brick.y + brick.height) {
+                        brick.destroyed = true;
+                        gameState.ball.dy = -gameState.ball.dy;
+                        gameState.score += 10;
+                        updateScore(gameState.score);
+                        playSound(800, 0.1);
+                    }
+                });
+                
+                // Oyun bitti kontrolü
+                if (gameState.ball.y > canvas.height) {
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    playSound(200, 0.5);
+                    clearInterval(gameInterval);
+                    return;
+                }
+                
+                // Kazanma kontrolü
+                if (gameState.bricks.every(brick => brick.destroyed)) {
+                    showMessage('Tebrikler! Kazandınız!', 'win-message');
+                    playSound(800, 0.3);
+                    clearInterval(gameInterval);
+                    return;
+                }
+                
+                draw();
+            }
+            
+            // Kontroller
+            document.addEventListener('keydown', (e) => {
+                gameState.keys[e.key] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                gameState.keys[e.key] = false;
+            });
+            
+            draw();
+            gameInterval = setInterval(update, 16);
+        }
+
+        // FLAPPY BIRD OYUNU
+        function initFlappyBird(canvas, ctx) {
+            gameState = {
+                bird: { x: 100, y: canvas.height / 2, dy: 0, radius: 15 },
+                pipes: [],
+                score: 0,
+                gameOver: false
+            };
+            
+            function createPipe() {
+                const gap = 120;
+                const pipeHeight = Math.random() * (canvas.height - gap - 100) + 50;
+                gameState.pipes.push({
+                    x: canvas.width,
+                    topHeight: pipeHeight,
+                    bottomY: pipeHeight + gap,
+                    width: 50,
+                    passed: false
+                });
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Kuş
+                ctx.fillStyle = '#ffeb3b';
+                ctx.beginPath();
+                ctx.arc(gameState.bird.x, gameState.bird.y, gameState.bird.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Borular
+                ctx.fillStyle = '#4caf50';
+                gameState.pipes.forEach(pipe => {
+                    // Üst boru
+                    ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
+                    // Alt boru
+                    ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
+                });
+            }
+            
+            function update() {
+                if (gameState.gameOver) return;
+                
+                // Kuş fizik
+                gameState.bird.dy += 0.5; // Yerçekimi
+                gameState.bird.y += gameState.bird.dy;
+                
+                // Borular
+                gameState.pipes.forEach(pipe => {
+                    pipe.x -= 3;
+                    
+                    // Puan
+                    if (!pipe.passed && pipe.x + pipe.width < gameState.bird.x) {
+                        pipe.passed = true;
+                        gameState.score++;
+                        updateScore(gameState.score);
+                        playSound(600, 0.1);
+                    }
+                    
+                    // Çarpışma
+                    if (gameState.bird.x + gameState.bird.radius > pipe.x &&
+                        gameState.bird.x - gameState.bird.radius < pipe.x + pipe.width &&
+                        (gameState.bird.y - gameState.bird.radius < pipe.topHeight ||
+                         gameState.bird.y + gameState.bird.radius > pipe.bottomY)) {
+                        gameState.gameOver = true;
+                        showMessage('Oyun Bitti!', 'lose-message');
+                        playSound(200, 0.5);
+                        clearInterval(gameInterval);
+                        return;
+                    }
+                });
+                
+                // Eski boruları temizle
+                gameState.pipes = gameState.pipes.filter(pipe => pipe.x + pipe.width > 0);
+                
+                // Yeni boru ekle
+                if (gameState.pipes.length === 0 || gameState.pipes[gameState.pipes.length - 1].x < canvas.width - 200) {
+                    createPipe();
+                }
+                
+                // Zemin/tavan çarpışması
+                if (gameState.bird.y <= gameState.bird.radius || gameState.bird.y >= canvas.height - gameState.bird.radius) {
+                    gameState.gameOver = true;
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    playSound(200, 0.5);
+                    clearInterval(gameInterval);
+                    return;
+                }
+                
+                draw();
+            }
+            
+            // Kontroller
+            document.addEventListener('keydown', (e) => {
+                if (e.key === ' ') {
+                    gameState.bird.dy = -8;
+                    playSound(400, 0.1);
+                }
+            });
+            
+            createPipe();
+            draw();
+            gameInterval = setInterval(update, 16);
+        }
+
+        // MEMORY OYUNU
+        function initMemory(canvas, ctx) {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f'];
+            const cards = [...colors, ...colors].sort(() => Math.random() - 0.5);
+            
+            gameState = {
+                cards: cards.map((color, index) => ({
+                    color,
+                    flipped: false,
+                    matched: false,
+                    index
+                })),
+                flippedCards: [],
+                score: 0,
+                moves: 0
+            };
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const cardWidth = 70;
+                const cardHeight = 90;
+                const cols = 4;
+                const rows = 4;
+                
+                for (let i = 0; i < 16; i++) {
+                    const x = (i % cols) * (cardWidth + 10) + 100;
+                    const y = Math.floor(i / cols) * (cardHeight + 10) + 50;
+                    const card = gameState.cards[i];
+                    
+                    if (card.flipped || card.matched) {
+                        ctx.fillStyle = card.color;
+                    } else {
+                        ctx.fillStyle = '#333';
+                    }
+                    
+                    ctx.fillRect(x, y, cardWidth, cardHeight);
+                    ctx.strokeStyle = '#fff';
+                    ctx.strokeRect(x, y, cardWidth, cardHeight);
+                }
+            }
+            
+            function flipCard(index) {
+                if (gameState.flippedCards.length >= 2) return;
+                if (gameState.cards[index].flipped || gameState.cards[index].matched) return;
+                
+                gameState.cards[index].flipped = true;
+                gameState.flippedCards.push(index);
+                playSound(400, 0.1);
+                
+                if (gameState.flippedCards.length === 2) {
+                    gameState.moves++;
+                    setTimeout(() => {
+                        const [first, second] = gameState.flippedCards;
+                        if (gameState.cards[first].color === gameState.cards[second].color) {
+                            gameState.cards[first].matched = true;
+                            gameState.cards[second].matched = true;
+                            gameState.score += 10;
+                            updateScore(gameState.score);
+                            playSound(600, 0.2);
+                            
+                            // Oyun bitti mi?
+                            if (gameState.cards.every(card => card.matched)) {
+                                showMessage('Tebrikler! Oyunu Bitirdiniz!', 'win-message');
+                                playSound(800, 0.3);
+                            }
+                        } else {
+                            gameState.cards[first].flipped = false;
+                            gameState.cards[second].flipped = false;
+                            playSound(300, 0.1);
+                        }
+                        gameState.flippedCards = [];
+                        draw();
+                    }, 1000);
+                }
+                
+                draw();
+            }
+            
+            // Fare tıklama
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const cardWidth = 70;
+                const cardHeight = 90;
+                const cols = 4;
+                
+                for (let i = 0; i < 16; i++) {
+                    const cardX = (i % cols) * (cardWidth + 10) + 100;
+                    const cardY = Math.floor(i / cols) * (cardHeight + 10) + 50;
+                    
+                    if (x >= cardX && x <= cardX + cardWidth &&
+                        y >= cardY && y <= cardY + cardHeight) {
+                        flipCard(i);
+                        break;
+                    }
+                }
+            });
+            
+            draw();
+        }
+
+        // PACMAN OYUNU (Basit versiyon)
+        function initPacman(canvas, ctx) {
+            const CELL_SIZE = 20;
+            const COLS = 30;
+            const ROWS = 20;
+            
+            canvas.width = COLS * CELL_SIZE;
+            canvas.height = ROWS * CELL_SIZE;
+            
+            gameState = {
+                pacman: { x: 1, y: 1, direction: 'right', mouthOpen: true },
+                ghosts: [
+                    { x: 28, y: 1, direction: 'left', color: '#ff0000' },
+                    { x: 28, y: 18, direction: 'left', color: '#ffb8ff' }
+                ],
+                dots: [],
+                score: 0,
+                gameOver: false
+            };
+            
+            // Noktalar oluştur
+            for (let x = 2; x < COLS - 2; x += 2) {
+                for (let y = 2; y < ROWS - 2; y += 2) {
+                    gameState.dots.push({ x, y });
+                }
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Duvarlar
+                ctx.fillStyle = '#0000ff';
+                ctx.fillRect(0, 0, canvas.width, CELL_SIZE);
+                ctx.fillRect(0, canvas.height - CELL_SIZE, canvas.width, CELL_SIZE);
+                ctx.fillRect(0, 0, CELL_SIZE, canvas.height);
+                ctx.fillRect(canvas.width - CELL_SIZE, 0, CELL_SIZE, canvas.height);
+                
+                // Noktalar
+                ctx.fillStyle = '#ffff00';
+                gameState.dots.forEach(dot => {
+                    ctx.beginPath();
+                    ctx.arc(dot.x * CELL_SIZE + CELL_SIZE/2, dot.y * CELL_SIZE + CELL_SIZE/2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                // Pacman
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(gameState.pacman.x * CELL_SIZE + CELL_SIZE/2, gameState.pacman.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Hayaletler
+                gameState.ghosts.forEach(ghost => {
+                    ctx.fillStyle = ghost.color;
+                    ctx.beginPath();
+                    ctx.arc(ghost.x * CELL_SIZE + CELL_SIZE/2, ghost.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            function update() {
+                if (gameState.gameOver) return;
+                
+                // Pacman hareket
+                const directions = {
+                    'up': { x: 0, y: -1 },
+                    'down': { x: 0, y: 1 },
+                    'left': { x: -1, y: 0 },
+                    'right': { x: 1, y: 0 }
+                };
+                
+                const dir = directions[gameState.pacman.direction];
+                const newX = gameState.pacman.x + dir.x;
+                const newY = gameState.pacman.y + dir.y;
+                
+                if (newX > 0 && newX < COLS - 1 && newY > 0 && newY < ROWS - 1) {
+                    gameState.pacman.x = newX;
+                    gameState.pacman.y = newY;
+                }
+                
+                // Nokta yeme
+                const dotIndex = gameState.dots.findIndex(dot => 
+                    dot.x === gameState.pacman.x && dot.y === gameState.pacman.y
+                );
+                if (dotIndex !== -1) {
+                    gameState.dots.splice(dotIndex, 1);
+                    gameState.score += 10;
+                    updateScore(gameState.score);
+                    playSound(600, 0.05);
+                }
+                
+                // Hayalet hareket
+                gameState.ghosts.forEach(ghost => {
+                    const ghostDir = directions[ghost.direction];
+                    const ghostNewX = ghost.x + ghostDir.x;
+                    const ghostNewY = ghost.y + ghostDir.y;
+                    
+                    if (ghostNewX > 0 && ghostNewX < COLS - 1 && ghostNewY > 0 && ghostNewY < ROWS - 1) {
+                        ghost.x = ghostNewX;
+                        ghost.y = ghostNewY;
+                    } else {
+                        ghost.direction = ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)];
+                    }
+                });
+                
+                // Çarpışma kontrolü
+                gameState.ghosts.forEach(ghost => {
+                    if (ghost.x === gameState.pacman.x && ghost.y === gameState.pacman.y) {
+                        gameState.gameOver = true;
+                        showMessage('Oyun Bitti!', 'lose-message');
+                        playSound(200, 0.5);
+                        clearInterval(gameInterval);
+                    }
+                });
+                
+                // Kazanma kontrolü
+                if (gameState.dots.length === 0) {
+                    showMessage('Tebrikler! Kazandınız!', 'win-message');
+                    playSound(800, 0.3);
+                    clearInterval(gameInterval);
+                }
+                
+                draw();
+            }
+            
+            // Kontroller
+            document.addEventListener('keydown', (e) => {
+                if (gameState.gameOver) return;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        gameState.pacman.direction = 'up';
+                        break;
+                    case 'ArrowDown':
+                        gameState.pacman.direction = 'down';
+                        break;
+                    case 'ArrowLeft':
+                        gameState.pacman.direction = 'left';
+                        break;
+                    case 'ArrowRight':
+                        gameState.pacman.direction = 'right';
+                        break;
+                }
+            });
+            
+            draw();
+            gameInterval = setInterval(update, 200);
+        }
+
+        // İlk yüklemede ana sayfayı göster
+        showHome();
+    </script>
+</body>
+</html>
+Add HTML file
