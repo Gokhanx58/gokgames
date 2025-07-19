@@ -1959,18 +1959,21 @@ draw();
                 enemyBullets: [],
                 score: 0,
                 gameOver: false,
-                keys: {}
+                keys: {},
+                enemyDirection: 1,
+                enemyMoveDown: false
             };
             
-            // Düşmanları oluştur
+            // Düşmanları oluştur (düzenli grid)
             for (let row = 0; row < 5; row++) {
                 for (let col = 0; col < 10; col++) {
                     gameState.enemies.push({
-                        x: col * 50 + 50,
+                        x: col * 50 + 75,
                         y: row * 40 + 50,
                         width: 30,
                         height: 20,
-                        alive: true
+                        alive: true,
+                        color: ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff'][row]
                     });
                 }
             }
@@ -1978,96 +1981,151 @@ draw();
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // Oyuncu
+                // Arka plan (uzay)
+                ctx.fillStyle = '#000011';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Yıldızlar
+                for (let i = 0; i < 50; i++) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+                }
+                
+                // Oyuncu (uzay gemisi)
                 ctx.fillStyle = '#00ff00';
                 ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+                // Gemi detayları
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(gameState.player.x + 20, gameState.player.y - 5, 10, 5);
                 
                 // Oyuncu mermileri
                 ctx.fillStyle = '#ffff00';
                 gameState.bullets.forEach(bullet => {
-                    ctx.fillRect(bullet.x, bullet.y, 3, 10);
+                    ctx.fillRect(bullet.x, bullet.y, 4, 12);
                 });
                 
-                // Düşmanlar
-                ctx.fillStyle = '#ff0000';
+                // Düşmanlar (renkli uzaylılar)
                 gameState.enemies.forEach(enemy => {
                     if (enemy.alive) {
+                        ctx.fillStyle = enemy.color;
                         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                        // Uzaylı gözleri
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(enemy.x + 5, enemy.y + 5, 4, 4);
+                        ctx.fillRect(enemy.x + 21, enemy.y + 5, 4, 4);
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
+                        ctx.fillRect(enemy.x + 22, enemy.y + 6, 2, 2);
                     }
                 });
                 
                 // Düşman mermileri
-                ctx.fillStyle = '#ff00ff';
+                ctx.fillStyle = '#ff0000';
                 gameState.enemyBullets.forEach(bullet => {
-                    ctx.fillRect(bullet.x, bullet.y, 3, 10);
+                    ctx.fillRect(bullet.x, bullet.y, 4, 8);
                 });
+                
+                // Skor gösterimi
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Puan: ${gameState.score}`, 10, 30);
+                
+                // Kalan düşman sayısı
+                const aliveCount = gameState.enemies.filter(e => e.alive).length;
+                ctx.fillText(`Düşman: ${aliveCount}`, 10, 55);
             }
             
             function update() {
                 if (gameState.gameOver) return;
                 
-                // Oyuncu hareket
+                // Oyuncu hareket (daha hızlı)
                 if (gameState.keys['ArrowLeft'] && gameState.player.x > 0) {
-                    gameState.player.x -= 5;
+                    gameState.player.x -= 8;
                 }
                 if (gameState.keys['ArrowRight'] && gameState.player.x < canvas.width - gameState.player.width) {
-                    gameState.player.x += 5;
+                    gameState.player.x += 8;
                 }
                 
-                // Mermiler hareket
+                // Mermiler hareket (daha hızlı)
                 gameState.bullets.forEach(bullet => {
-                    bullet.y -= 7;
+                    bullet.y -= 10;
                 });
                 gameState.bullets = gameState.bullets.filter(bullet => bullet.y > 0);
                 
                 // Düşman mermileri hareket
                 gameState.enemyBullets.forEach(bullet => {
-                    bullet.y += 3;
+                    bullet.y += 5;
                 });
                 gameState.enemyBullets = gameState.enemyBullets.filter(bullet => bullet.y < canvas.height);
                 
-                // Düşman hareket
+                // Düşman hareket (daha iyi algoritma)
+                let shouldMoveDown = false;
                 gameState.enemies.forEach(enemy => {
                     if (enemy.alive) {
-                        enemy.x += 0.5;
-                        if (enemy.x > canvas.width - enemy.width || enemy.x < 0) {
-                            enemy.y += 20;
+                        if (enemy.x <= 0 || enemy.x >= canvas.width - enemy.width) {
+                            shouldMoveDown = true;
                         }
                     }
                 });
                 
+                if (shouldMoveDown) {
+                    gameState.enemyDirection *= -1;
+                    gameState.enemies.forEach(enemy => {
+                        if (enemy.alive) {
+                            enemy.y += 20;
+                        }
+                    });
+                } else {
+                    gameState.enemies.forEach(enemy => {
+                        if (enemy.alive) {
+                            enemy.x += gameState.enemyDirection * 2;
+                        }
+                    });
+                }
+                
                 // Çarpışma - Oyuncu mermileri vs Düşmanlar
                 gameState.bullets.forEach((bullet, bulletIndex) => {
-                    gameState.enemies.forEach((enemy, enemyIndex) => {
+                    gameState.enemies.forEach((enemy) => {
                         if (enemy.alive &&
                             bullet.x < enemy.x + enemy.width &&
-                            bullet.x + 3 > enemy.x &&
+                            bullet.x + 4 > enemy.x &&
                             bullet.y < enemy.y + enemy.height &&
-                            bullet.y + 10 > enemy.y) {
+                            bullet.y + 12 > enemy.y) {
                             enemy.alive = false;
                             gameState.bullets.splice(bulletIndex, 1);
                             gameState.score += 10;
                             updateScore(gameState.score);
-                            playSound(600, 0.1);
+                            playSound(800, 0.1);
                         }
                     });
                 });
                 
                 // Çarpışma - Düşman mermileri vs Oyuncu
-                gameState.enemyBullets.forEach((bullet, bulletIndex) => {
+                gameState.enemyBullets.forEach((bullet) => {
                     if (bullet.x < gameState.player.x + gameState.player.width &&
-                        bullet.x + 3 > gameState.player.x &&
+                        bullet.x + 4 > gameState.player.x &&
                         bullet.y < gameState.player.y + gameState.player.height &&
-                        bullet.y + 10 > gameState.player.y) {
+                        bullet.y + 8 > gameState.player.y) {
                         gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
+                        showMessage('Dünyayı koruyamadın!', 'lose-message');
                         playSound(200, 0.5);
                         clearInterval(gameInterval);
                     }
                 });
                 
-                // Rastgele düşman ateş etme
-                if (Math.random() < 0.01) {
+                // Düşmanlar oyuncuya çok yaklaştı mı?
+                gameState.enemies.forEach(enemy => {
+                    if (enemy.alive && enemy.y > canvas.height - 100) {
+                        gameState.gameOver = true;
+                        showMessage('İstila başarılı! Kaybettin!', 'lose-message');
+                        playSound(200, 0.5);
+                        clearInterval(gameInterval);
+                    }
+                });
+                
+                // Rastgele düşman ateş etme (daha az sıklıkta)
+                if (Math.random() < 0.005) {
                     const aliveEnemies = gameState.enemies.filter(e => e.alive);
                     if (aliveEnemies.length > 0) {
                         const enemy = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
@@ -2075,13 +2133,14 @@ draw();
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y + enemy.height
                         });
+                        playSound(300, 0.1);
                     }
                 }
                 
                 // Kazanma kontrolü
                 if (gameState.enemies.every(enemy => !enemy.alive)) {
-                    showMessage('Tebrikler! Kazandınız!', 'win-message');
-                    playSound(800, 0.3);
+                    showMessage('Dünyayı kurtardın! Kahraman!', 'win-message');
+                    playSound(800, 0.5);
                     clearInterval(gameInterval);
                 }
                 
@@ -2092,12 +2151,12 @@ draw();
             document.addEventListener('keydown', (e) => {
                 gameState.keys[e.key] = true;
                 
-                if (e.key === ' ') {
+                if (e.key === ' ' && !gameState.gameOver) {
                     gameState.bullets.push({
-                        x: gameState.player.x + gameState.player.width / 2,
+                        x: gameState.player.x + gameState.player.width / 2 - 2,
                         y: gameState.player.y
                     });
-                    playSound(400, 0.1);
+                    playSound(600, 0.1);
                 }
             });
             
@@ -2106,7 +2165,7 @@ draw();
             });
             
             draw();
-            gameInterval = setInterval(update, 16);
+            gameInterval = setInterval(update, 50);
         }
 
         // İlk yüklemede ana sayfayı göster
