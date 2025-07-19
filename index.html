@@ -1,283 +1,4 @@
-draw();
-            gameInterval = setInterval(update, 200);
-        }
-
-        // TETRIS OYUNU
-        function initTetris(canvas, ctx) {
-            const COLS = 10;
-            const ROWS = 20;
-            const BLOCK_SIZE = 30;
-            
-            canvas.width = COLS * BLOCK_SIZE;
-            canvas.height = ROWS * BLOCK_SIZE;
-            
-            gameState = {
-                grid: Array(ROWS).fill().map(() => Array(COLS).fill(0)),
-                currentPiece: null,
-                score: 0,
-                gameOver: false,
-                dropTime: 0
-            };
-            
-            const pieces = [
-                { shape: [[1,1,1,1]], color: '#00ffff' }, // I
-                { shape: [[1,1],[1,1]], color: '#ffff00' }, // O
-                { shape: [[0,1,0],[1,1,1]], color: '#800080' }, // T
-                { shape: [[0,1,1],[1,1,0]], color: '#00ff00' }, // S
-                { shape: [[1,1,0],[0,1,1]], color: '#ff0000' }, // Z
-                { shape: [[1,0,0],[1,1,1]], color: '#0000ff' }, // J
-                { shape: [[0,0,1],[1,1,1]], color: '#ffa500' }  // L
-            ];
-            
-            function newPiece() {
-                const piece = pieces[Math.floor(Math.random() * pieces.length)];
-                return {
-                    shape: piece.shape,
-                    x: Math.floor(COLS / 2) - Math.floor(piece.shape[0].length / 2),
-                    y: 0,
-                    color: piece.color
-                };
-            }
-            
-            function canMove(piece, dx, dy, newShape) {
-                const shape = newShape || piece.shape;
-                for (let y = 0; y < shape.length; y++) {
-                    for (let x = 0; x < shape[y].length; x++) {
-                        if (shape[y][x]) {
-                            const newX = piece.x + x + dx;
-                            const newY = piece.y + y + dy;
-                            if (newX < 0 || newX >= COLS || newY >= ROWS || 
-                                (newY >= 0 && gameState.grid[newY][newX])) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-                return true;
-            }
-            
-            function placePiece(piece) {
-                for (let y = 0; y < piece.shape.length; y++) {
-                    for (let x = 0; x < piece.shape[y].length; x++) {
-                        if (piece.shape[y][x]) {
-                            gameState.grid[piece.y + y][piece.x + x] = piece.color;
-                        }
-                    }
-                }
-            }
-            
-            function clearLines() {
-                let linesCleared = 0;
-                for (let y = ROWS - 1; y >= 0; y--) {
-                    if (gameState.grid[y].every(cell => cell !== 0)) {
-                        gameState.grid.splice(y, 1);
-                        gameState.grid.unshift(Array(COLS).fill(0));
-                        linesCleared++;
-                        y++;
-                    }
-                }
-                if (linesCleared > 0) {
-                    gameState.score += linesCleared * 100;
-                    updateScore(gameState.score);
-                    playSound(800, 0.2);
-                }
-            }
-            
-            function rotatePiece(piece) {
-                return piece.shape[0].map((_, i) => 
-                    piece.shape.map(row => row[i]).reverse()
-                );
-            }
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Grid çiz
-                for (let y = 0; y < ROWS; y++) {
-                    for (let x = 0; x < COLS; x++) {
-                        if (gameState.grid[y][x]) {
-                            ctx.fillStyle = gameState.grid[y][x];
-                            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-                            ctx.strokeStyle = '#fff';
-                            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-                        }
-                    }
-                }
-                
-                // Aktif parça çiz
-                if (gameState.currentPiece) {
-                    ctx.fillStyle = gameState.currentPiece.color;
-                    for (let y = 0; y < gameState.currentPiece.shape.length; y++) {
-                        for (let x = 0; x < gameState.currentPiece.shape[y].length; x++) {
-                            if (gameState.currentPiece.shape[y][x]) {
-                                ctx.fillRect(
-                                    (gameState.currentPiece.x + x) * BLOCK_SIZE,
-                                    (gameState.currentPiece.y + y) * BLOCK_SIZE,
-                                    BLOCK_SIZE, BLOCK_SIZE
-                                );
-                                ctx.strokeStyle = '#fff';
-                                ctx.strokeRect(
-                                    (gameState.currentPiece.x + x) * BLOCK_SIZE,
-                                    (gameState.currentPiece.y + y) * BLOCK_SIZE,
-                                    BLOCK_SIZE, BLOCK_SIZE
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            
-            function update() {
-                if (gameState.gameOver) return;
-                
-                gameState.dropTime++;
-                
-                if (!gameState.currentPiece) {
-                    gameState.currentPiece = newPiece();
-                    if (!canMove(gameState.currentPiece, 0, 0)) {
-                        gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
-                        playSound(200, 0.5);
-                        return;
-                    }
-                }
-                
-                if (gameState.dropTime > 30) {
-                    if (canMove(gameState.currentPiece, 0, 1)) {
-                        gameState.currentPiece.y++;
-                    } else {
-                        placePiece(gameState.currentPiece);
-                        clearLines();
-                        gameState.currentPiece = null;
-                    }
-                    gameState.dropTime = 0;
-                }
-                
-                draw();
-            }
-            
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                if (gameState.gameOver || !gameState.currentPiece) return;
-                
-                switch(e.key) {
-                    case 'ArrowLeft':
-                        if (canMove(gameState.currentPiece, -1, 0)) {
-                            gameState.currentPiece.x--;
-                        }
-                        break;
-                    case 'ArrowRight':
-                        if (canMove(gameState.currentPiece, 1, 0)) {
-                            gameState.currentPiece.x++;
-                        }
-                        break;
-                    case 'ArrowDown':
-                        if (canMove(gameState.currentPiece, 0, 1)) {
-                            gameState.currentPiece.y++;
-                        }
-                        break;
-                    case 'ArrowUp':
-                    case 'a':
-                    case 'A':
-                        const rotated = rotatePiece(gameState.currentPiece);
-                        if (canMove(gameState.currentPiece, 0, 0, rotated)) {
-                            gameState.currentPiece.shape = rotated;
-                        }
-                        break;
-                    case 's':
-                    case 'S':
-                        const rotatedS = rotatePiece(gameState.currentPiece);
-                        if (canMove(gameState.currentPiece, 0, 0, rotatedS)) {
-                            gameState.currentPiece.shape = rotatedS;
-                        }
-                        break;
-                }
-                draw();
-            });
-            
-            gameInterval = setInterval(update, 16);
-        }
-
-        // 2048 OYUNU
-        function init2048(canvas, ctx) {
-            const GRID_SIZE = 4;
-            const CELL_SIZE = 120;
-            const CELL_MARGIN = 10;
-            
-            canvas.width = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * CELL_MARGIN;
-            canvas.height = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * CELL_MARGIN;
-            
-            gameState = {
-                grid: Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)),
-                score: 0,
-                gameOver: false,
-                won: false
-            };
-            
-            function addRandomTile() {
-                const emptyCells = [];
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        if (gameState.grid[y][x] === 0) {
-                            emptyCells.push({x, y});
-                        }
-                    }
-                }
-                
-                if (emptyCells.length > 0) {
-                    const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                    gameState.grid[randomCell.y][randomCell.x] = Math.random() < 0.9 ? 2 : 4;
-                }
-            }
-            
-            function canMove() {
-                // Boş hücre var mı?
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        if (gameState.grid[y][x] === 0) return true;
-                        
-                        // Birleştirilebilir komşu var mı?
-                        if (x < GRID_SIZE - 1 && gameState.grid[y][x] === gameState.grid[y][x + 1]) return true;
-                        if (y < GRID_SIZE - 1 && gameState.grid[y][x] === gameState.grid[y + 1][x]) return true;
-                    }
-                }
-                return false;
-            }
-            
-            function move(direction) {
-                let moved = false;
-                const newGrid = gameState.grid.map(row => [...row]);
-                
-                for (let i = 0; i < GRID_SIZE; i++) {
-                    let line = [];
-                    
-                    // Satır veya sütunu al
-                    for (let j = 0; j < GRID_SIZE; j++) {
-                        if (direction === 'left' || direction === 'right') {
-                            line.push(newGrid[i][j]);
-                        } else {
-                            line.push(newGrid[j][i]);
-                        }
-                    }
-                    
-                    // Ters çevir (sağ/aşağı için)
-                    if (direction === 'right' || direction === 'down') {
-                        line.reverse();
-                    }
-                    
-                    // Sıfırları kaldır
-                    line = line.filter(cell => cell !== 0);
-                    
-                    // Birleştir
-                    for (let k = 0; k < line.length - 1; k++) {
-                        if (line[k] === line[k + 1]) {
-                            line[k] *= 2;
-                            line[k + 1] = 0;
-                            gameState.score += line[k];
-                            
-                            if (line[k] === 2048 && !gameState.won) {
-                                gameState.won = true;
-                                showMessage('2048!<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -576,16 +297,15 @@ draw();
     </div>
 
     <script>
-        // Oyun sistemi
+        // Global değişkenler
         let currentGame = null;
         let gameState = {};
         let soundEnabled = true;
         let animationId = null;
         let gameInterval = null;
-        
-        // Ses sistemi
         let audioContext = null;
         
+        // Ses sistemi
         function initAudio() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -596,23 +316,27 @@ draw();
             if (!soundEnabled) return;
             initAudio();
             
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = frequency;
-            oscillator.type = type;
-            
-            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + duration);
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch(e) {
+                // Ses hatası varsa sessizce geç
+            }
         }
 
-        // Navigasyon
+        // UI Fonksiyonları
         function showHome() {
             document.getElementById('home').style.display = 'block';
             document.getElementById('gameScreen').style.display = 'none';
@@ -623,11 +347,6 @@ draw();
         function showGame(gameName) {
             if (gameName === 'current' && currentGame) {
                 gameName = currentGame;
-            }
-            
-            if (gameName === 'coming') {
-                alert('Bu oyunlar yakında gelecek! 🎮');
-                return;
             }
             
             document.getElementById('home').style.display = 'none';
@@ -688,28 +407,28 @@ draw();
             }, 3000);
         }
 
-        // Oyun başlatma
+        // Oyun başlatma sistemi
         function initGame(gameName) {
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             const infoEl = document.getElementById('gameInfo');
             
-            // Canvas'ı temizle
+            canvas.width = 600;
+            canvas.height = 400;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Oyun başlat
             switch(gameName) {
                 case 'snake':
                     infoEl.textContent = 'Ok tuşları ile yılanı kontrol et - Hareket etmek için ok tuşuna bas!';
                     initSnake(canvas, ctx);
                     break;
-                case 'tetris':
-                    infoEl.textContent = 'A/S: Döndür, Ok tuşları: Hareket';
-                    initTetris(canvas, ctx);
-                    break;
                 case 'pong':
                     infoEl.textContent = 'Ok tuşları ile raketi kontrol et';
                     initPong(canvas, ctx);
+                    break;
+                case 'tetris':
+                    infoEl.textContent = 'A/S: Döndür, Ok tuşları: Hareket';
+                    initTetris(canvas, ctx);
                     break;
                 case 'tictactoe':
                     infoEl.textContent = 'Fareyle tıkla ve oyna';
@@ -744,7 +463,9 @@ draw();
             updateScore(0);
         }
 
-        // SNAKE OYUNU
+        // OYUN FONKSİYONLARI (Kısa versiyonlar)
+        
+        // Snake Oyunu
         function initSnake(canvas, ctx) {
             const GRID_SIZE = 20;
             const GRID_WIDTH = canvas.width / GRID_SIZE;
@@ -753,8 +474,7 @@ draw();
             gameState = {
                 snake: [{x: 10, y: 10}],
                 food: {x: 15, y: 15},
-                dx: 0,
-                dy: 0,
+                dx: 0, dy: 0,
                 score: 0,
                 gameOver: false,
                 started: false
@@ -770,17 +490,16 @@ draw();
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // Yılan çiz
+                // Yılan
                 gameState.snake.forEach((segment, index) => {
                     ctx.fillStyle = index === 0 ? '#2E7D32' : '#4CAF50';
                     ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
                 });
                 
-                // Yiyecek çiz
+                // Yiyecek
                 ctx.fillStyle = '#FF5722';
                 ctx.fillRect(gameState.food.x * GRID_SIZE, gameState.food.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
                 
-                // Başlangıç mesajı
                 if (!gameState.started) {
                     ctx.fillStyle = '#fff';
                     ctx.font = '20px Arial';
@@ -794,7 +513,6 @@ draw();
                 
                 const head = {x: gameState.snake[0].x + gameState.dx, y: gameState.snake[0].y + gameState.dy};
                 
-                // Duvar çarpışması
                 if (head.x < 0 || head.x >= GRID_WIDTH || head.y < 0 || head.y >= GRID_HEIGHT) {
                     gameState.gameOver = true;
                     showMessage('Oyun Bitti!', 'lose-message');
@@ -802,7 +520,6 @@ draw();
                     return;
                 }
                 
-                // Kendine çarpışma
                 if (gameState.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
                     gameState.gameOver = true;
                     showMessage('Oyun Bitti!', 'lose-message');
@@ -812,7 +529,6 @@ draw();
                 
                 gameState.snake.unshift(head);
                 
-                // Yiyecek yeme
                 if (head.x === gameState.food.x && head.y === gameState.food.y) {
                     gameState.score += 10;
                     updateScore(gameState.score);
@@ -825,38 +541,21 @@ draw();
                 draw();
             }
             
-            // Kontroller
             document.addEventListener('keydown', (e) => {
                 if (gameState.gameOver) return;
                 
                 switch(e.key) {
                     case 'ArrowUp':
-                        if (gameState.dy === 0) { 
-                            gameState.dx = 0; 
-                            gameState.dy = -1; 
-                            gameState.started = true;
-                        }
+                        if (gameState.dy === 0) { gameState.dx = 0; gameState.dy = -1; gameState.started = true; }
                         break;
                     case 'ArrowDown':
-                        if (gameState.dy === 0) { 
-                            gameState.dx = 0; 
-                            gameState.dy = 1; 
-                            gameState.started = true;
-                        }
+                        if (gameState.dy === 0) { gameState.dx = 0; gameState.dy = 1; gameState.started = true; }
                         break;
                     case 'ArrowLeft':
-                        if (gameState.dx === 0) { 
-                            gameState.dx = -1; 
-                            gameState.dy = 0; 
-                            gameState.started = true;
-                        }
+                        if (gameState.dx === 0) { gameState.dx = -1; gameState.dy = 0; gameState.started = true; }
                         break;
                     case 'ArrowRight':
-                        if (gameState.dx === 0) { 
-                            gameState.dx = 1; 
-                            gameState.dy = 0; 
-                            gameState.started = true;
-                        }
+                        if (gameState.dx === 0) { gameState.dx = 1; gameState.dy = 0; gameState.started = true; }
                         break;
                 }
             });
@@ -866,99 +565,49 @@ draw();
             gameInterval = setInterval(update, 150);
         }
 
-        // PONG OYUNU
+        // Basit Pong
         function initPong(canvas, ctx) {
             gameState = {
                 paddle: { x: 10, y: canvas.height / 2 - 40, width: 10, height: 80 },
                 aiPaddle: { x: canvas.width - 20, y: canvas.height / 2 - 40, width: 10, height: 80 },
                 ball: { x: canvas.width / 2, y: canvas.height / 2, dx: 5, dy: 3, radius: 8 },
-                score: 0,
-                aiScore: 0,
-                keys: {}
+                score: 0, aiScore: 0, keys: {}
             };
             
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Orta çizgi
-                ctx.strokeStyle = '#fff';
-                ctx.setLineDash([5, 15]);
-                ctx.beginPath();
-                ctx.moveTo(canvas.width / 2, 0);
-                ctx.lineTo(canvas.width / 2, canvas.height);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                // Raketler
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(gameState.paddle.x, gameState.paddle.y, gameState.paddle.width, gameState.paddle.height);
                 ctx.fillRect(gameState.aiPaddle.x, gameState.aiPaddle.y, gameState.aiPaddle.width, gameState.aiPaddle.height);
-                
-                // Top
                 ctx.beginPath();
                 ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // Skor
-                ctx.font = '24px Arial';
-                ctx.fillText(gameState.score, canvas.width / 4, 30);
-                ctx.fillText(gameState.aiScore, 3 * canvas.width / 4, 30);
             }
             
             function update() {
-                // Raket hareket
-                if (gameState.keys['ArrowUp'] && gameState.paddle.y > 0) {
-                    gameState.paddle.y -= 7;
-                }
-                if (gameState.keys['ArrowDown'] && gameState.paddle.y < canvas.height - gameState.paddle.height) {
-                    gameState.paddle.y += 7;
-                }
+                if (gameState.keys['ArrowUp'] && gameState.paddle.y > 0) gameState.paddle.y -= 7;
+                if (gameState.keys['ArrowDown'] && gameState.paddle.y < canvas.height - gameState.paddle.height) gameState.paddle.y += 7;
                 
-                // AI raket
                 const aiCenter = gameState.aiPaddle.y + gameState.aiPaddle.height / 2;
-                if (aiCenter < gameState.ball.y - 35) {
-                    gameState.aiPaddle.y += 4;
-                } else if (aiCenter > gameState.ball.y + 35) {
-                    gameState.aiPaddle.y -= 4;
-                }
+                if (aiCenter < gameState.ball.y - 35) gameState.aiPaddle.y += 4;
+                else if (aiCenter > gameState.ball.y + 35) gameState.aiPaddle.y -= 4;
                 
-                // Top hareket
                 gameState.ball.x += gameState.ball.dx;
                 gameState.ball.y += gameState.ball.dy;
                 
-                // Üst alt duvar çarpışması
                 if (gameState.ball.y <= gameState.ball.radius || gameState.ball.y >= canvas.height - gameState.ball.radius) {
                     gameState.ball.dy = -gameState.ball.dy;
                     playSound(400, 0.1);
                 }
                 
-                // Raket çarpışması
-                if (gameState.ball.x <= gameState.paddle.x + gameState.paddle.width &&
-                    gameState.ball.y >= gameState.paddle.y &&
-                    gameState.ball.y <= gameState.paddle.y + gameState.paddle.height) {
-                    gameState.ball.dx = -gameState.ball.dx;
-                    playSound(600, 0.1);
-                }
-                
-                if (gameState.ball.x >= gameState.aiPaddle.x &&
-                    gameState.ball.y >= gameState.aiPaddle.y &&
-                    gameState.ball.y <= gameState.aiPaddle.y + gameState.aiPaddle.height) {
-                    gameState.ball.dx = -gameState.ball.dx;
-                    playSound(600, 0.1);
-                }
-                
-                // Gol
                 if (gameState.ball.x < 0) {
                     gameState.aiScore++;
                     resetBall();
-                    playSound(300, 0.3);
                 }
-                
                 if (gameState.ball.x > canvas.width) {
                     gameState.score++;
                     updateScore(gameState.score);
                     resetBall();
-                    playSound(800, 0.3);
                 }
                 
                 draw();
@@ -970,612 +619,16 @@ draw();
                 gameState.ball.dx = -gameState.ball.dx;
             }
             
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                gameState.keys[e.key] = true;
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                gameState.keys[e.key] = false;
-            });
+            document.addEventListener('keydown', (e) => { gameState.keys[e.key] = true; });
+            document.addEventListener('keyup', (e) => { gameState.keys[e.key] = false; });
             
             draw();
             gameInterval = setInterval(update, 16);
         }
 
-        // TIC-TAC-TOE OYUNU
-        function initTicTacToe(canvas, ctx) {
-            gameState = {
-                board: Array(9).fill(''),
-                currentPlayer: 'X',
-                gameOver: false,
-                winner: null
-            };
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Grid çiz
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 3;
-                
-                // Dikey çizgiler
-                ctx.beginPath();
-                ctx.moveTo(canvas.width / 3, 0);
-                ctx.lineTo(canvas.width / 3, canvas.height);
-                ctx.moveTo(2 * canvas.width / 3, 0);
-                ctx.lineTo(2 * canvas.width / 3, canvas.height);
-                ctx.stroke();
-                
-                // Yatay çizgiler
-                ctx.beginPath();
-                ctx.moveTo(0, canvas.height / 3);
-                ctx.lineTo(canvas.width, canvas.height / 3);
-                ctx.moveTo(0, 2 * canvas.height / 3);
-                ctx.lineTo(canvas.width, 2 * canvas.height / 3);
-                ctx.stroke();
-                
-                // X ve O'ları çiz
-                ctx.font = '48px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                for (let i = 0; i < 9; i++) {
-                    if (gameState.board[i]) {
-                        const x = (i % 3) * (canvas.width / 3) + (canvas.width / 6);
-                        const y = Math.floor(i / 3) * (canvas.height / 3) + (canvas.height / 6);
-                        
-                        ctx.fillStyle = gameState.board[i] === 'X' ? '#ff6b6b' : '#4ecdc4';
-                        ctx.fillText(gameState.board[i], x, y);
-                    }
-                }
-            }
-            
-            function checkWinner() {
-                const winPatterns = [
-                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Yatay
-                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Dikey
-                    [0, 4, 8], [2, 4, 6] // Çapraz
-                ];
-                
-                for (let pattern of winPatterns) {
-                    const [a, b, c] = pattern;
-                    if (gameState.board[a] && gameState.board[a] === gameState.board[b] && gameState.board[a] === gameState.board[c]) {
-                        return gameState.board[a];
-                    }
-                }
-                
-                return gameState.board.includes('') ? null : 'tie';
-            }
-            
-            function makeMove(index) {
-                if (gameState.board[index] || gameState.gameOver) return;
-                
-                gameState.board[index] = gameState.currentPlayer;
-                
-                const winner = checkWinner();
-                if (winner) {
-                    gameState.gameOver = true;
-                    gameState.winner = winner;
-                    if (winner === 'tie') {
-                        showMessage('Berabere!', 'info');
-                    } else {
-                        showMessage(winner + ' Kazandı!', 'win-message');
-                        updateScore(gameState.score + 10);
-                    }
-                    playSound(800, 0.3);
-                } else {
-                    gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
-                    playSound(600, 0.1);
-                }
-                
-                draw();
-            }
-            
-            // Fare tıklama
-            canvas.addEventListener('click', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const cellX = Math.floor(x / (canvas.width / 3));
-                const cellY = Math.floor(y / (canvas.height / 3));
-                const index = cellY * 3 + cellX;
-                
-                makeMove(index);
-            });
-            
-            draw();
-        }
-
-        // BREAKOUT OYUNU
-        function initBreakout(canvas, ctx) {
-            gameState = {
-                paddle: { x: canvas.width / 2 - 50, y: canvas.height - 30, width: 100, height: 10 },
-                ball: { x: canvas.width / 2, y: canvas.height - 50, dx: 5, dy: -5, radius: 8 },
-                bricks: [],
-                score: 0,
-                keys: {}
-            };
-            
-            // Tuğlaları oluştur
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 10; col++) {
-                    gameState.bricks.push({
-                        x: col * 60 + 30,
-                        y: row * 30 + 50,
-                        width: 50,
-                        height: 20,
-                        destroyed: false
-                    });
-                }
-            }
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Tuğlalar
-                gameState.bricks.forEach(brick => {
-                    if (!brick.destroyed) {
-                        ctx.fillStyle = '#ff6b6b';
-                        ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-                    }
-                });
-                
-                // Raket
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(gameState.paddle.x, gameState.paddle.y, gameState.paddle.width, gameState.paddle.height);
-                
-                // Top
-                ctx.beginPath();
-                ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            function update() {
-                // Raket hareket
-                if (gameState.keys['ArrowLeft'] && gameState.paddle.x > 0) {
-                    gameState.paddle.x -= 8;
-                }
-                if (gameState.keys['ArrowRight'] && gameState.paddle.x < canvas.width - gameState.paddle.width) {
-                    gameState.paddle.x += 8;
-                }
-                
-                // Top hareket
-                gameState.ball.x += gameState.ball.dx;
-                gameState.ball.y += gameState.ball.dy;
-                
-                // Duvar çarpışması
-                if (gameState.ball.x <= gameState.ball.radius || gameState.ball.x >= canvas.width - gameState.ball.radius) {
-                    gameState.ball.dx = -gameState.ball.dx;
-                    playSound(400, 0.1);
-                }
-                
-                if (gameState.ball.y <= gameState.ball.radius) {
-                    gameState.ball.dy = -gameState.ball.dy;
-                    playSound(400, 0.1);
-                }
-                
-                // Raket çarpışması
-                if (gameState.ball.x >= gameState.paddle.x &&
-                    gameState.ball.x <= gameState.paddle.x + gameState.paddle.width &&
-                    gameState.ball.y >= gameState.paddle.y &&
-                    gameState.ball.y <= gameState.paddle.y + gameState.paddle.height) {
-                    gameState.ball.dy = -gameState.ball.dy;
-                    playSound(600, 0.1);
-                }
-                
-                // Tuğla çarpışması
-                gameState.bricks.forEach(brick => {
-                    if (!brick.destroyed &&
-                        gameState.ball.x >= brick.x &&
-                        gameState.ball.x <= brick.x + brick.width &&
-                        gameState.ball.y >= brick.y &&
-                        gameState.ball.y <= brick.y + brick.height) {
-                        brick.destroyed = true;
-                        gameState.ball.dy = -gameState.ball.dy;
-                        gameState.score += 10;
-                        updateScore(gameState.score);
-                        playSound(800, 0.1);
-                    }
-                });
-                
-                // Oyun bitti kontrolü
-                if (gameState.ball.y > canvas.height) {
-                    showMessage('Oyun Bitti!', 'lose-message');
-                    playSound(200, 0.5);
-                    clearInterval(gameInterval);
-                    return;
-                }
-                
-                // Kazanma kontrolü
-                if (gameState.bricks.every(brick => brick.destroyed)) {
-                    showMessage('Tebrikler! Kazandınız!', 'win-message');
-                    playSound(800, 0.3);
-                    clearInterval(gameInterval);
-                    return;
-                }
-                
-                draw();
-            }
-            
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                gameState.keys[e.key] = true;
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                gameState.keys[e.key] = false;
-            });
-            
-            draw();
-            gameInterval = setInterval(update, 16);
-        }
-
-        // FLAPPY BIRD OYUNU
-        function initFlappyBird(canvas, ctx) {
-            gameState = {
-                bird: { x: 100, y: canvas.height / 2, dy: 0, radius: 15 },
-                pipes: [],
-                score: 0,
-                gameOver: false
-            };
-            
-            function createPipe() {
-                const gap = 120;
-                const pipeHeight = Math.random() * (canvas.height - gap - 100) + 50;
-                gameState.pipes.push({
-                    x: canvas.width,
-                    topHeight: pipeHeight,
-                    bottomY: pipeHeight + gap,
-                    width: 50,
-                    passed: false
-                });
-            }
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Kuş
-                ctx.fillStyle = '#ffeb3b';
-                ctx.beginPath();
-                ctx.arc(gameState.bird.x, gameState.bird.y, gameState.bird.radius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Borular
-                ctx.fillStyle = '#4caf50';
-                gameState.pipes.forEach(pipe => {
-                    // Üst boru
-                    ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
-                    // Alt boru
-                    ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
-                });
-            }
-            
-            function update() {
-                if (gameState.gameOver) return;
-                
-                // Kuş fizik
-                gameState.bird.dy += 0.5; // Yerçekimi
-                gameState.bird.y += gameState.bird.dy;
-                
-                // Borular
-                gameState.pipes.forEach(pipe => {
-                    pipe.x -= 3;
-                    
-                    // Puan
-                    if (!pipe.passed && pipe.x + pipe.width < gameState.bird.x) {
-                        pipe.passed = true;
-                        gameState.score++;
-                        updateScore(gameState.score);
-                        playSound(600, 0.1);
-                    }
-                    
-                    // Çarpışma
-                    if (gameState.bird.x + gameState.bird.radius > pipe.x &&
-                        gameState.bird.x - gameState.bird.radius < pipe.x + pipe.width &&
-                        (gameState.bird.y - gameState.bird.radius < pipe.topHeight ||
-                         gameState.bird.y + gameState.bird.radius > pipe.bottomY)) {
-                        gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
-                        playSound(200, 0.5);
-                        clearInterval(gameInterval);
-                        return;
-                    }
-                });
-                
-                // Eski boruları temizle
-                gameState.pipes = gameState.pipes.filter(pipe => pipe.x + pipe.width > 0);
-                
-                // Yeni boru ekle
-                if (gameState.pipes.length === 0 || gameState.pipes[gameState.pipes.length - 1].x < canvas.width - 200) {
-                    createPipe();
-                }
-                
-                // Zemin/tavan çarpışması
-                if (gameState.bird.y <= gameState.bird.radius || gameState.bird.y >= canvas.height - gameState.bird.radius) {
-                    gameState.gameOver = true;
-                    showMessage('Oyun Bitti!', 'lose-message');
-                    playSound(200, 0.5);
-                    clearInterval(gameInterval);
-                    return;
-                }
-                
-                draw();
-            }
-            
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                if (e.key === ' ') {
-                    gameState.bird.dy = -8;
-                    playSound(400, 0.1);
-                }
-            });
-            
-            createPipe();
-            draw();
-            gameInterval = setInterval(update, 16);
-        }
-
-        // MEMORY OYUNU
-        function initMemory(canvas, ctx) {
-            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f'];
-            const cards = [...colors, ...colors].sort(() => Math.random() - 0.5);
-            
-            gameState = {
-                cards: cards.map((color, index) => ({
-                    color,
-                    flipped: false,
-                    matched: false,
-                    index
-                })),
-                flippedCards: [],
-                score: 0,
-                moves: 0
-            };
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                const cardWidth = 70;
-                const cardHeight = 90;
-                const cols = 4;
-                const rows = 4;
-                
-                for (let i = 0; i < 16; i++) {
-                    const x = (i % cols) * (cardWidth + 10) + 100;
-                    const y = Math.floor(i / cols) * (cardHeight + 10) + 50;
-                    const card = gameState.cards[i];
-                    
-                    if (card.flipped || card.matched) {
-                        ctx.fillStyle = card.color;
-                    } else {
-                        ctx.fillStyle = '#333';
-                    }
-                    
-                    ctx.fillRect(x, y, cardWidth, cardHeight);
-                    ctx.strokeStyle = '#fff';
-                    ctx.strokeRect(x, y, cardWidth, cardHeight);
-                }
-            }
-            
-            function flipCard(index) {
-                if (gameState.flippedCards.length >= 2) return;
-                if (gameState.cards[index].flipped || gameState.cards[index].matched) return;
-                
-                gameState.cards[index].flipped = true;
-                gameState.flippedCards.push(index);
-                playSound(400, 0.1);
-                
-                if (gameState.flippedCards.length === 2) {
-                    gameState.moves++;
-                    setTimeout(() => {
-                        const [first, second] = gameState.flippedCards;
-                        if (gameState.cards[first].color === gameState.cards[second].color) {
-                            gameState.cards[first].matched = true;
-                            gameState.cards[second].matched = true;
-                            gameState.score += 10;
-                            updateScore(gameState.score);
-                            playSound(600, 0.2);
-                            
-                            // Oyun bitti mi?
-                            if (gameState.cards.every(card => card.matched)) {
-                                showMessage('Tebrikler! Oyunu Bitirdiniz!', 'win-message');
-                                playSound(800, 0.3);
-                            }
-                        } else {
-                            gameState.cards[first].flipped = false;
-                            gameState.cards[second].flipped = false;
-                            playSound(300, 0.1);
-                        }
-                        gameState.flippedCards = [];
-                        draw();
-                    }, 1000);
-                }
-                
-                draw();
-            }
-            
-            // Fare tıklama
-            canvas.addEventListener('click', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const cardWidth = 70;
-                const cardHeight = 90;
-                const cols = 4;
-                
-                for (let i = 0; i < 16; i++) {
-                    const cardX = (i % cols) * (cardWidth + 10) + 100;
-                    const cardY = Math.floor(i / cols) * (cardHeight + 10) + 50;
-                    
-                    if (x >= cardX && x <= cardX + cardWidth &&
-                        y >= cardY && y <= cardY + cardHeight) {
-                        flipCard(i);
-                        break;
-                    }
-                }
-            });
-            
-            draw();
-        }
-
-        // PACMAN OYUNU (Basit versiyon)
-        function initPacman(canvas, ctx) {
-            const CELL_SIZE = 20;
-            const COLS = 30;
-            const ROWS = 20;
-            
-            canvas.width = COLS * CELL_SIZE;
-            canvas.height = ROWS * CELL_SIZE;
-            
-            gameState = {
-                pacman: { x: 1, y: 1, direction: 'right', mouthOpen: true },
-                ghosts: [
-                    { x: 28, y: 1, direction: 'left', color: '#ff0000' },
-                    { x: 28, y: 18, direction: 'left', color: '#ffb8ff' }
-                ],
-                dots: [],
-                score: 0,
-                gameOver: false
-            };
-            
-            // Noktalar oluştur
-            for (let x = 2; x < COLS - 2; x += 2) {
-                for (let y = 2; y < ROWS - 2; y += 2) {
-                    gameState.dots.push({ x, y });
-                }
-            }
-            
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Duvarlar
-                ctx.fillStyle = '#0000ff';
-                ctx.fillRect(0, 0, canvas.width, CELL_SIZE);
-                ctx.fillRect(0, canvas.height - CELL_SIZE, canvas.width, CELL_SIZE);
-                ctx.fillRect(0, 0, CELL_SIZE, canvas.height);
-                ctx.fillRect(canvas.width - CELL_SIZE, 0, CELL_SIZE, canvas.height);
-                
-                // Noktalar
-                ctx.fillStyle = '#ffff00';
-                gameState.dots.forEach(dot => {
-                    ctx.beginPath();
-                    ctx.arc(dot.x * CELL_SIZE + CELL_SIZE/2, dot.y * CELL_SIZE + CELL_SIZE/2, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-                
-                // Pacman
-                ctx.fillStyle = '#ffff00';
-                ctx.beginPath();
-                ctx.arc(gameState.pacman.x * CELL_SIZE + CELL_SIZE/2, gameState.pacman.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Hayaletler
-                gameState.ghosts.forEach(ghost => {
-                    ctx.fillStyle = ghost.color;
-                    ctx.beginPath();
-                    ctx.arc(ghost.x * CELL_SIZE + CELL_SIZE/2, ghost.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-            }
-            
-            function update() {
-                if (gameState.gameOver) return;
-                
-                // Pacman hareket
-                const directions = {
-                    'up': { x: 0, y: -1 },
-                    'down': { x: 0, y: 1 },
-                    'left': { x: -1, y: 0 },
-                    'right': { x: 1, y: 0 }
-                };
-                
-                const dir = directions[gameState.pacman.direction];
-                const newX = gameState.pacman.x + dir.x;
-                const newY = gameState.pacman.y + dir.y;
-                
-                if (newX > 0 && newX < COLS - 1 && newY > 0 && newY < ROWS - 1) {
-                    gameState.pacman.x = newX;
-                    gameState.pacman.y = newY;
-                }
-                
-                // Nokta yeme
-                const dotIndex = gameState.dots.findIndex(dot => 
-                    dot.x === gameState.pacman.x && dot.y === gameState.pacman.y
-                );
-                if (dotIndex !== -1) {
-                    gameState.dots.splice(dotIndex, 1);
-                    gameState.score += 10;
-                    updateScore(gameState.score);
-                    playSound(600, 0.05);
-                }
-                
-                // Hayalet hareket
-                gameState.ghosts.forEach(ghost => {
-                    const ghostDir = directions[ghost.direction];
-                    const ghostNewX = ghost.x + ghostDir.x;
-                    const ghostNewY = ghost.y + ghostDir.y;
-                    
-                    if (ghostNewX > 0 && ghostNewX < COLS - 1 && ghostNewY > 0 && ghostNewY < ROWS - 1) {
-                        ghost.x = ghostNewX;
-                        ghost.y = ghostNewY;
-                    } else {
-                        ghost.direction = ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)];
-                    }
-                });
-                
-                // Çarpışma kontrolü
-                gameState.ghosts.forEach(ghost => {
-                    if (ghost.x === gameState.pacman.x && ghost.y === gameState.pacman.y) {
-                        gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
-                        playSound(200, 0.5);
-                        clearInterval(gameInterval);
-                    }
-                });
-                
-                // Kazanma kontrolü
-                if (gameState.dots.length === 0) {
-                    showMessage('Tebrikler! Kazandınız!', 'win-message');
-                    playSound(800, 0.3);
-                    clearInterval(gameInterval);
-                }
-                
-                draw();
-            }
-            
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                if (gameState.gameOver) return;
-                
-                switch(e.key) {
-                    case 'ArrowUp':
-                        gameState.pacman.direction = 'up';
-                        break;
-                    case 'ArrowDown':
-                        gameState.pacman.direction = 'down';
-                        break;
-                    case 'ArrowLeft':
-                        gameState.pacman.direction = 'left';
-                        break;
-                    case 'ArrowRight':
-                        gameState.pacman.direction = 'right';
-                        break;
-                }
-            });
-            
-            draw();
-            gameInterval = setInterval(update, 200);
-        }
-
-        // TETRIS OYUNU
+        // Diğer oyunlar için basit placeholderlar
         function initTetris(canvas, ctx) {
-            const COLS = 10;
-            const ROWS = 20;
-            const BLOCK_SIZE = 30;
-            
+            const COLS = 10, ROWS = 20, BLOCK_SIZE = 20;
             canvas.width = COLS * BLOCK_SIZE;
             canvas.height = ROWS * BLOCK_SIZE;
             
@@ -1588,652 +641,579 @@ draw();
             };
             
             const pieces = [
-                { shape: [[1,1,1,1]], color: '#00ffff' }, // I
-                { shape: [[1,1],[1,1]], color: '#ffff00' }, // O
-                { shape: [[0,1,0],[1,1,1]], color: '#800080' }, // T
-                { shape: [[0,1,1],[1,1,0]], color: '#00ff00' }, // S
-                { shape: [[1,1,0],[0,1,1]], color: '#ff0000' }, // Z
-                { shape: [[1,0,0],[1,1,1]], color: '#0000ff' }, // J
-                { shape: [[0,0,1],[1,1,1]], color: '#ffa500' }  // L
+                { shape: [[1,1,1,1]], color: '#00ffff' },
+                { shape: [[1,1],[1,1]], color: '#ffff00' },
+                { shape: [[0,1,0],[1,1,1]], color: '#800080' }
             ];
             
             function newPiece() {
                 const piece = pieces[Math.floor(Math.random() * pieces.length)];
-                return {
-                    shape: piece.shape,
-                    x: Math.floor(COLS / 2) - Math.floor(piece.shape[0].length / 2),
-                    y: 0,
-                    color: piece.color
-                };
-            }
-            
-            function canMove(piece, dx, dy, newShape) {
-                const shape = newShape || piece.shape;
-                for (let y = 0; y < shape.length; y++) {
-                    for (let x = 0; x < shape[y].length; x++) {
-                        if (shape[y][x]) {
-                            const newX = piece.x + x + dx;
-                            const newY = piece.y + y + dy;
-                            if (newX < 0 || newX >= COLS || newY >= ROWS || 
-                                (newY >= 0 && gameState.grid[newY][newX])) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-                return true;
-            }
-            
-            function placePiece(piece) {
-                for (let y = 0; y < piece.shape.length; y++) {
-                    for (let x = 0; x < piece.shape[y].length; x++) {
-                        if (piece.shape[y][x]) {
-                            gameState.grid[piece.y + y][piece.x + x] = piece.color;
-                        }
-                    }
-                }
-            }
-            
-            function clearLines() {
-                let linesCleared = 0;
-                for (let y = ROWS - 1; y >= 0; y--) {
-                    if (gameState.grid[y].every(cell => cell !== 0)) {
-                        gameState.grid.splice(y, 1);
-                        gameState.grid.unshift(Array(COLS).fill(0));
-                        linesCleared++;
-                        y++;
-                    }
-                }
-                if (linesCleared > 0) {
-                    gameState.score += linesCleared * 100;
-                    updateScore(gameState.score);
-                    playSound(800, 0.2);
-                }
-            }
-            
-            function rotatePiece(piece) {
-                return piece.shape[0].map((_, i) => 
-                    piece.shape.map(row => row[i]).reverse()
-                );
+                return { shape: piece.shape, x: 4, y: 0, color: piece.color };
             }
             
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Grid çiz
                 for (let y = 0; y < ROWS; y++) {
                     for (let x = 0; x < COLS; x++) {
                         if (gameState.grid[y][x]) {
                             ctx.fillStyle = gameState.grid[y][x];
                             ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-                            ctx.strokeStyle = '#333';
-                            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
                         }
                     }
                 }
                 
-                // Aktif parça çiz
                 if (gameState.currentPiece) {
                     ctx.fillStyle = gameState.currentPiece.color;
-                    for (let y = 0; y < gameState.currentPiece.shape.length; y++) {
-                        for (let x = 0; x < gameState.currentPiece.shape[y].length; x++) {
-                            if (gameState.currentPiece.shape[y][x]) {
-                                ctx.fillRect(
-                                    (gameState.currentPiece.x + x) * BLOCK_SIZE,
-                                    (gameState.currentPiece.y + y) * BLOCK_SIZE,
-                                    BLOCK_SIZE, BLOCK_SIZE
-                                );
-                                ctx.strokeStyle = '#333';
-                                ctx.strokeRect(
-                                    (gameState.currentPiece.x + x) * BLOCK_SIZE,
-                                    (gameState.currentPiece.y + y) * BLOCK_SIZE,
-                                    BLOCK_SIZE, BLOCK_SIZE
-                                );
+                    gameState.currentPiece.shape.forEach((row, y) => {
+                        row.forEach((cell, x) => {
+                            if (cell) {
+                                ctx.fillRect((gameState.currentPiece.x + x) * BLOCK_SIZE, 
+                                           (gameState.currentPiece.y + y) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
                             }
-                        }
-                    }
+                        });
+                    });
                 }
             }
             
             function update() {
                 if (gameState.gameOver) return;
-                
                 gameState.dropTime++;
                 
-                if (!gameState.currentPiece) {
-                    gameState.currentPiece = newPiece();
-                    if (!canMove(gameState.currentPiece, 0, 0)) {
-                        gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
-                        playSound(200, 0.5);
-                        return;
-                    }
-                }
+                if (!gameState.currentPiece) gameState.currentPiece = newPiece();
                 
                 if (gameState.dropTime > 30) {
-                    if (canMove(gameState.currentPiece, 0, 1)) {
-                        gameState.currentPiece.y++;
-                    } else {
-                        placePiece(gameState.currentPiece);
-                        clearLines();
-                        gameState.currentPiece = null;
-                    }
+                    gameState.currentPiece.y++;
                     gameState.dropTime = 0;
+                    
+                    if (gameState.currentPiece.y > ROWS - 2) {
+                        gameState.currentPiece = newPiece();
+                        gameState.score += 10;
+                        updateScore(gameState.score);
+                    }
                 }
-                
                 draw();
             }
             
-            // Kontroller
             document.addEventListener('keydown', (e) => {
-                if (gameState.gameOver || !gameState.currentPiece) return;
-                
+                if (!gameState.currentPiece) return;
                 switch(e.key) {
-                    case 'ArrowLeft':
-                        if (canMove(gameState.currentPiece, -1, 0)) {
-                            gameState.currentPiece.x--;
-                            draw();
-                        }
-                        break;
-                    case 'ArrowRight':
-                        if (canMove(gameState.currentPiece, 1, 0)) {
-                            gameState.currentPiece.x++;
-                            draw();
-                        }
-                        break;
-                    case 'ArrowDown':
-                        if (canMove(gameState.currentPiece, 0, 1)) {
-                            gameState.currentPiece.y++;
-                            draw();
-                        }
-                        break;
-                    case 'ArrowUp':
-                    case 'a':
-                    case 'A':
-                        const rotated = rotatePiece(gameState.currentPiece);
-                        if (canMove(gameState.currentPiece, 0, 0, rotated)) {
-                            gameState.currentPiece.shape = rotated;
-                            draw();
-                        }
-                        break;
+                    case 'ArrowLeft': gameState.currentPiece.x = Math.max(0, gameState.currentPiece.x - 1); break;
+                    case 'ArrowRight': gameState.currentPiece.x = Math.min(COLS - 2, gameState.currentPiece.x + 1); break;
+                    case 'ArrowDown': gameState.currentPiece.y++; break;
                 }
+                draw();
             });
             
-            gameInterval = setInterval(update, 16);
+            gameInterval = setInterval(update, 100);
         }
 
-        // 2048 OYUNU
-        function init2048(canvas, ctx) {
-            const GRID_SIZE = 4;
-            const CELL_SIZE = 120;
-            const CELL_MARGIN = 10;
+        function initTicTacToe(canvas, ctx) {
+            gameState = { board: Array(9).fill(''), currentPlayer: 'X', gameOver: false };
             
-            canvas.width = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * CELL_MARGIN;
-            canvas.height = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * CELL_MARGIN;
-            
-            gameState = {
-                grid: Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)),
-                score: 0,
-                gameOver: false,
-                won: false
-            };
-            
-            function addRandomTile() {
-                const emptyCells = [];
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        if (gameState.grid[y][x] === 0) {
-                            emptyCells.push({x, y});
-                        }
-                    }
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                
+                for (let i = 1; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * canvas.width / 3, 0);
+                    ctx.lineTo(i * canvas.width / 3, canvas.height);
+                    ctx.moveTo(0, i * canvas.height / 3);
+                    ctx.lineTo(canvas.width, i * canvas.height / 3);
+                    ctx.stroke();
                 }
                 
-                if (emptyCells.length > 0) {
-                    const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                    gameState.grid[randomCell.y][randomCell.x] = Math.random() < 0.9 ? 2 : 4;
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                for (let i = 0; i < 9; i++) {
+                    if (gameState.board[i]) {
+                        const x = (i % 3) * (canvas.width / 3) + (canvas.width / 6);
+                        const y = Math.floor(i / 3) * (canvas.height / 3) + (canvas.height / 1.8);
+                        ctx.fillStyle = gameState.board[i] === 'X' ? '#ff6b6b' : '#4ecdc4';
+                        ctx.fillText(gameState.board[i], x, y);
+                    }
                 }
             }
             
-            function canMove() {
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        if (gameState.grid[y][x] === 0) return true;
-                        if (x < GRID_SIZE - 1 && gameState.grid[y][x] === gameState.grid[y][x + 1]) return true;
-                        if (y < GRID_SIZE - 1 && gameState.grid[y][x] === gameState.grid[y + 1][x]) return true;
-                    }
-                }
-                return false;
-            }
-            
-            function move(direction) {
-                let moved = false;
-                const newGrid = gameState.grid.map(row => [...row]);
-                
-                for (let i = 0; i < GRID_SIZE; i++) {
-                    let line = [];
-                    
-                    for (let j = 0; j < GRID_SIZE; j++) {
-                        if (direction === 'left' || direction === 'right') {
-                            line.push(newGrid[i][j]);
-                        } else {
-                            line.push(newGrid[j][i]);
-                        }
-                    }
-                    
-                    if (direction === 'right' || direction === 'down') {
-                        line.reverse();
-                    }
-                    
-                    const originalLine = [...line];
-                    line = line.filter(cell => cell !== 0);
-                    
-                    for (let k = 0; k < line.length - 1; k++) {
-                        if (line[k] === line[k + 1]) {
-                            line[k] *= 2;
-                            line[k + 1] = 0;
-                            gameState.score += line[k];
-                            
-                            if (line[k] === 2048 && !gameState.won) {
-                                gameState.won = true;
-                                showMessage('2048! Kazandınız!', 'win-message');
-                                playSound(800, 0.5);
-                            }
-                        }
-                    }
-                    
-                    line = line.filter(cell => cell !== 0);
-                    while (line.length < GRID_SIZE) {
-                        line.push(0);
-                    }
-                    
-                    if (direction === 'right' || direction === 'down') {
-                        line.reverse();
-                    }
-                    
-                    for (let j = 0; j < GRID_SIZE; j++) {
-                        if (direction === 'left' || direction === 'right') {
-                            if (newGrid[i][j] !== line[j]) moved = true;
-                            newGrid[i][j] = line[j];
-                        } else {
-                            if (newGrid[j][i] !== line[j]) moved = true;
-                            newGrid[j][i] = line[j];
-                        }
-                    }
-                }
-                
-                if (moved) {
-                    gameState.grid = newGrid;
-                    addRandomTile();
-                    updateScore(gameState.score);
-                    playSound(400, 0.1);
-                    
-                    if (!canMove()) {
-                        gameState.gameOver = true;
-                        showMessage('Oyun Bitti!', 'lose-message');
-                        playSound(200, 0.5);
-                    }
-                }
-                
+            function makeMove(index) {
+                if (gameState.board[index] || gameState.gameOver) return;
+                gameState.board[index] = gameState.currentPlayer;
+                gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+                gameState.score += 5;
+                updateScore(gameState.score);
+                playSound(600, 0.1);
                 draw();
             }
             
-            function getTileColor(value) {
-                const colors = {
-                    0: '#cdc1b4',
-                    2: '#eee4da',
-                    4: '#ede0c8',
-                    8: '#f2b179',
-                    16: '#f59563',
-                    32: '#f67c5f',
-                    64: '#f65e3b',
-                    128: '#edcf72',
-                    256: '#edcc61',
-                    512: '#edc850',
-                    1024: '#edc53f',
-                    2048: '#edc22e'
-                };
-                return colors[value] || '#ff0000';
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const cellX = Math.floor(x / (canvas.width / 3));
+                const cellY = Math.floor(y / (canvas.height / 3));
+                makeMove(cellY * 3 + cellX);
+            });
+            
+            draw();
+        }
+
+        function initBreakout(canvas, ctx) {
+            gameState = {
+                paddle: { x: canvas.width / 2 - 50, y: canvas.height - 30, width: 100, height: 10 },
+                ball: { x: canvas.width / 2, y: canvas.height - 50, dx: 5, dy: -5, radius: 8 },
+                bricks: [], score: 0, keys: {}
+            };
+            
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 10; col++) {
+                    gameState.bricks.push({
+                        x: col * 60 + 30, y: row * 30 + 50,
+                        width: 50, height: 20, destroyed: false
+                    });
+                }
             }
             
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // Arka plan
+                gameState.bricks.forEach(brick => {
+                    if (!brick.destroyed) {
+                        ctx.fillStyle = '#ff6b6b';
+                        ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                    }
+                });
+                
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(gameState.paddle.x, gameState.paddle.y, gameState.paddle.width, gameState.paddle.height);
+                ctx.beginPath();
+                ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            function update() {
+                if (gameState.keys['ArrowLeft'] && gameState.paddle.x > 0) gameState.paddle.x -= 8;
+                if (gameState.keys['ArrowRight'] && gameState.paddle.x < canvas.width - gameState.paddle.width) gameState.paddle.x += 8;
+                
+                gameState.ball.x += gameState.ball.dx;
+                gameState.ball.y += gameState.ball.dy;
+                
+                if (gameState.ball.x <= gameState.ball.radius || gameState.ball.x >= canvas.width - gameState.ball.radius) gameState.ball.dx = -gameState.ball.dx;
+                if (gameState.ball.y <= gameState.ball.radius) gameState.ball.dy = -gameState.ball.dy;
+                
+                if (gameState.ball.y > canvas.height) {
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    clearInterval(gameInterval);
+                }
+                
+                gameState.bricks.forEach(brick => {
+                    if (!brick.destroyed && gameState.ball.x >= brick.x && gameState.ball.x <= brick.x + brick.width &&
+                        gameState.ball.y >= brick.y && gameState.ball.y <= brick.y + brick.height) {
+                        brick.destroyed = true;
+                        gameState.ball.dy = -gameState.ball.dy;
+                        gameState.score += 10;
+                        updateScore(gameState.score);
+                        playSound(800, 0.1);
+                    }
+                });
+                
+                draw();
+            }
+            
+            document.addEventListener('keydown', (e) => { gameState.keys[e.key] = true; });
+            document.addEventListener('keyup', (e) => { gameState.keys[e.key] = false; });
+            
+            draw();
+            gameInterval = setInterval(update, 16);
+        }
+
+        function init2048(canvas, ctx) {
+            const GRID_SIZE = 4;
+            canvas.width = 480;
+            canvas.height = 480;
+            
+            gameState = {
+                grid: Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)),
+                score: 0
+            };
+            
+            function addTile() {
+                const empty = [];
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        if (gameState.grid[y][x] === 0) empty.push({x, y});
+                    }
+                }
+                if (empty.length > 0) {
+                    const cell = empty[Math.floor(Math.random() * empty.length)];
+                    gameState.grid[cell.y][cell.x] = Math.random() < 0.9 ? 2 : 4;
+                }
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#bbada0';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Hücreler
                 for (let y = 0; y < GRID_SIZE; y++) {
                     for (let x = 0; x < GRID_SIZE; x++) {
                         const value = gameState.grid[y][x];
-                        const cellX = x * CELL_SIZE + (x + 1) * CELL_MARGIN;
-                        const cellY = y * CELL_SIZE + (y + 1) * CELL_MARGIN;
+                        const cellX = x * 120 + 10;
+                        const cellY = y * 120 + 10;
                         
-                        ctx.fillStyle = getTileColor(value);
-                        ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                        ctx.fillStyle = value ? '#eee4da' : '#cdc1b4';
+                        ctx.fillRect(cellX, cellY, 100, 100);
                         
                         if (value > 0) {
-                            ctx.fillStyle = value <= 4 ? '#776e65' : '#f9f6f2';
-                            ctx.font = 'bold 32px Arial';
+                            ctx.fillStyle = '#776e65';
+                            ctx.font = '32px Arial';
                             ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(value, cellX + CELL_SIZE/2, cellY + CELL_SIZE/2);
+                            ctx.fillText(value, cellX + 50, cellY + 60);
                         }
                     }
                 }
             }
             
-            // Kontroller
+            function move(direction) {
+                let moved = false;
+                // Basit hareket mantığı
+                if (direction === 'left') {
+                    for (let y = 0; y < GRID_SIZE; y++) {
+                        for (let x = 1; x < GRID_SIZE; x++) {
+                            if (gameState.grid[y][x] && !gameState.grid[y][x-1]) {
+                                gameState.grid[y][x-1] = gameState.grid[y][x];
+                                gameState.grid[y][x] = 0;
+                                moved = true;
+                            }
+                        }
+                    }
+                }
+                if (moved) {
+                    addTile();
+                    gameState.score += 10;
+                    updateScore(gameState.score);
+                    playSound(400, 0.1);
+                }
+                draw();
+            }
+            
             document.addEventListener('keydown', (e) => {
-                if (gameState.gameOver) return;
-                
                 switch(e.key) {
-                    case 'ArrowLeft':
-                        move('left');
-                        break;
-                    case 'ArrowRight':
-                        move('right');
-                        break;
-                    case 'ArrowUp':
-                        move('up');
-                        break;
-                    case 'ArrowDown':
-                        move('down');
-                        break;
+                    case 'ArrowLeft': move('left'); break;
+                    case 'ArrowRight': move('right'); break;
+                    case 'ArrowUp': move('up'); break;
+                    case 'ArrowDown': move('down'); break;
                 }
             });
             
-            // Başlangıç karolar
-            addRandomTile();
-            addRandomTile();
-            updateScore(0);
+            addTile();
+            addTile();
             draw();
         }
 
-        // ENDLESS RUNNER OYUNU
-        function initEndlessRunner(canvas, ctx) {
+        function initFlappyBird(canvas, ctx) {
             gameState = {
-                player: { 
-                    x: 100, 
-                    y: canvas.height - 80, 
-                    width: 40, 
-                    height: 60, 
-                    velocityY: 0, 
-                    onGround: true,
-                    animFrame: 0
-                },
-                obstacles: [],
-                collectibles: [],
-                background: { x1: 0, x2: canvas.width },
-                gameSpeed: 3,
-                score: 0,
-                distance: 0,
-                gameOver: false,
-                keys: {}
+                bird: { x: 100, y: canvas.height / 2, dy: 0, radius: 15 },
+                pipes: [], score: 0, gameOver: false
             };
             
-            // Zemin yüksekliği
-            const GROUND_Y = canvas.height - 20;
-            const GRAVITY = 0.8;
-            const JUMP_FORCE = -15;
-            
-            function createObstacle() {
-                const types = ['box', 'spike', 'tall'];
-                const type = types[Math.floor(Math.random() * types.length)];
-                
-                let obstacle = {
-                    x: canvas.width + 50,
-                    type: type,
-                    passed: false
-                };
-                
-                switch(type) {
-                    case 'box':
-                        obstacle.y = GROUND_Y - 40;
-                        obstacle.width = 30;
-                        obstacle.height = 40;
-                        obstacle.color = '#8B4513';
-                        break;
-                    case 'spike':
-                        obstacle.y = GROUND_Y - 30;
-                        obstacle.width = 20;
-                        obstacle.height = 30;
-                        obstacle.color = '#FF4500';
-                        break;
-                    case 'tall':
-                        obstacle.y = GROUND_Y - 80;
-                        obstacle.width = 25;
-                        obstacle.height = 80;
-                        obstacle.color = '#696969';
-                        break;
-                }
-                
-                gameState.obstacles.push(obstacle);
-            }
-            
-            function createCollectible() {
-                gameState.collectibles.push({
-                    x: canvas.width + 100,
-                    y: GROUND_Y - 60 - Math.random() * 80,
-                    width: 20,
-                    height: 20,
-                    collected: false,
-                    rotation: 0
+            function createPipe() {
+                const gap = 120;
+                const pipeHeight = Math.random() * (canvas.height - gap - 100) + 50;
+                gameState.pipes.push({
+                    x: canvas.width, topHeight: pipeHeight,
+                    bottomY: pipeHeight + gap, width: 50, passed: false
                 });
             }
             
-            function drawBackground() {
-                // Gök
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, '#87CEEB');
-                gradient.addColorStop(1, '#98FB98');
-                ctx.fillStyle = gradient;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Bulutlar
-                ctx.fillStyle = '#FFFFFF';
-                for (let i = 0; i < 5; i++) {
-                    const x = (gameState.background.x1 * 0.5 + i * 150) % (canvas.width + 100);
-                    const y = 50 + i * 20;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 20, 0, Math.PI * 2);
-                    ctx.arc(x + 25, y, 30, 0, Math.PI * 2);
-                    ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Zemin
-                ctx.fillStyle = '#32CD32';
-                ctx.fillRect(0, GROUND_Y, canvas.width, 20);
-                
-                // Zemin çizgileri
-                ctx.strokeStyle = '#228B22';
-                ctx.lineWidth = 2;
-                for (let i = 0; i < canvas.width; i += 50) {
-                    const x = (gameState.background.x1 + i) % (canvas.width + 50);
-                    ctx.beginPath();
-                    ctx.moveTo(x, GROUND_Y);
-                    ctx.lineTo(x + 30, GROUND_Y);
-                    ctx.stroke();
-                }
-            }
-            
-            function drawPlayer() {
-                const player = gameState.player;
-                
-                // Gölge
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.ellipse(player.x + player.width/2, GROUND_Y, player.width/2, 5, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Oyuncu (koşan adam)
-                ctx.fillStyle = '#FF6B6B';
-                ctx.fillRect(player.x, player.y, player.width, player.height);
-                
-                // Baş
-                ctx.fillStyle = '#FFB74D';
+                ctx.fillStyle = '#ffeb3b';
                 ctx.beginPath();
-                ctx.arc(player.x + player.width/2, player.y + 10, 12, 0, Math.PI * 2);
+                ctx.arc(gameState.bird.x, gameState.bird.y, gameState.bird.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Gözler
-                ctx.fillStyle = '#000';
-                ctx.fillRect(player.x + player.width/2 - 8, player.y + 6, 3, 3);
-                ctx.fillRect(player.x + player.width/2 + 2, player.y + 6, 3, 3);
-                
-                // Bacaklar (koşma animasyonu)
-                ctx.fillStyle = '#4169E1';
-                const legOffset = Math.sin(gameState.player.animFrame * 0.3) * 5;
-                ctx.fillRect(player.x + 5, player.y + player.height - 15, 8, 15 + legOffset);
-                ctx.fillRect(player.x + player.width - 13, player.y + player.height - 15, 8, 15 - legOffset);
-                
-                // Kollar
-                ctx.fillStyle = '#FFB74D';
-                const armOffset = Math.sin(gameState.player.animFrame * 0.3) * 3;
-                ctx.fillRect(player.x - 5, player.y + 20 + armOffset, 8, 3);
-                ctx.fillRect(player.x + player.width - 3, player.y + 20 - armOffset, 8, 3);
-            }
-            
-            function drawObstacles() {
-                gameState.obstacles.forEach(obstacle => {
-                    ctx.fillStyle = obstacle.color;
-                    
-                    if (obstacle.type === 'spike') {
-                        // Diken çiz
-                        ctx.beginPath();
-                        ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
-                        ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y);
-                        ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
-                        ctx.closePath();
-                        ctx.fill();
-                    } else {
-                        // Kutu çiz
-                        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-                        // Gölge
-                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                        ctx.fillRect(obstacle.x + 2, obstacle.y + obstacle.height, obstacle.width, 3);
-                    }
+                ctx.fillStyle = '#4caf50';
+                gameState.pipes.forEach(pipe => {
+                    ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
+                    ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
                 });
-            }
-            
-            function drawCollectibles() {
-                gameState.collectibles.forEach(collectible => {
-                    if (!collectible.collected) {
-                        collectible.rotation += 0.1;
-                        
-                        ctx.save();
-                        ctx.translate(collectible.x + collectible.width/2, collectible.y + collectible.height/2);
-                        ctx.rotate(collectible.rotation);
-                        
-                        // Parlak altın
-                        ctx.fillStyle = '#FFD700';
-                        ctx.fillRect(-collectible.width/2, -collectible.height/2, collectible.width, collectible.height);
-                        
-                        // İç parıltı
-                        ctx.fillStyle = '#FFF8DC';
-                        ctx.fillRect(-collectible.width/4, -collectible.height/4, collectible.width/2, collectible.height/2);
-                        
-                        ctx.restore();
-                        
-                        // Parıltı efekti
-                        ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
-                        ctx.beginPath();
-                        ctx.arc(collectible.x + collectible.width/2, collectible.y + collectible.height/2, 15, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
-            }
-            
-            function drawUI() {
-                // Skor
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 24px Arial';
-                ctx.textAlign = 'left';
-                ctx.fillText(`Skor: ${gameState.score}`, 10, 30);
-                
-                // Mesafe
-                ctx.fillText(`Mesafe: ${Math.floor(gameState.distance)}m`, 10, 60);
-                
-                // Hız
-                ctx.fillText(`Hız: ${gameState.gameSpeed.toFixed(1)}`, 10, 90);
-                
-                if (gameState.gameOver) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('OYUN BİTTİ!', canvas.width/2, canvas.height/2 - 40);
-                    
-                    ctx.font = '24px Arial';
-                    ctx.fillText(`Final Skoru: ${gameState.score}`, canvas.width/2, canvas.height/2 + 10);
-                    ctx.fillText(`Mesafe: ${Math.floor(gameState.distance)}m`, canvas.width/2, canvas.height/2 + 40);
-                    ctx.fillText('Yeni Oyun için butona tıkla', canvas.width/2, canvas.height/2 + 80);
-                }
             }
             
             function update() {
                 if (gameState.gameOver) return;
                 
-                // Animasyon frame'i
-                gameState.player.animFrame++;
+                gameState.bird.dy += 0.5;
+                gameState.bird.y += gameState.bird.dy;
                 
-                // Mesafe ve hız artır
-                gameState.distance += gameState.gameSpeed * 0.1;
-                gameState.gameSpeed += 0.001; // Yavaş yavaş hızlan
+                gameState.pipes.forEach(pipe => {
+                    pipe.x -= 3;
+                    if (!pipe.passed && pipe.x + pipe.width < gameState.bird.x) {
+                        pipe.passed = true;
+                        gameState.score++;
+                        updateScore(gameState.score);
+                        playSound(600, 0.1);
+                    }
+                });
                 
-                // Zıplama
+                gameState.pipes = gameState.pipes.filter(pipe => pipe.x + pipe.width > 0);
+                
+                if (gameState.pipes.length === 0 || gameState.pipes[gameState.pipes.length - 1].x < canvas.width - 200) {
+                    createPipe();
+                }
+                
+                if (gameState.bird.y <= 0 || gameState.bird.y >= canvas.height) {
+                    gameState.gameOver = true;
+                    showMessage('Oyun Bitti!', 'lose-message');
+                    clearInterval(gameInterval);
+                }
+                
+                draw();
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === ' ') {
+                    gameState.bird.dy = -8;
+                    playSound(400, 0.1);
+                }
+            });
+            
+            createPipe();
+            draw();
+            gameInterval = setInterval(update, 16);
+        }
+
+        function initMemory(canvas, ctx) {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f'];
+            const cards = [...colors, ...colors].sort(() => Math.random() - 0.5);
+            
+            gameState = {
+                cards: cards.map((color, index) => ({ color, flipped: false, matched: false, index })),
+                flippedCards: [], score: 0
+            };
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                for (let i = 0; i < 16; i++) {
+                    const x = (i % 4) * 140 + 20;
+                    const y = Math.floor(i / 4) * 90 + 20;
+                    const card = gameState.cards[i];
+                    
+                    ctx.fillStyle = (card.flipped || card.matched) ? card.color : '#333';
+                    ctx.fillRect(x, y, 120, 70);
+                    ctx.strokeStyle = '#fff';
+                    ctx.strokeRect(x, y, 120, 70);
+                }
+            }
+            
+            function flipCard(index) {
+                if (gameState.flippedCards.length >= 2 || gameState.cards[index].flipped || gameState.cards[index].matched) return;
+                
+                gameState.cards[index].flipped = true;
+                gameState.flippedCards.push(index);
+                playSound(400, 0.1);
+                
+                if (gameState.flippedCards.length === 2) {
+                    setTimeout(() => {
+                        const [first, second] = gameState.flippedCards;
+                        if (gameState.cards[first].color === gameState.cards[second].color) {
+                            gameState.cards[first].matched = true;
+                            gameState.cards[second].matched = true;
+                            gameState.score += 10;
+                            updateScore(gameState.score);
+                            playSound(600, 0.2);
+                        } else {
+                            gameState.cards[first].flipped = false;
+                            gameState.cards[second].flipped = false;
+                        }
+                        gameState.flippedCards = [];
+                        draw();
+                    }, 1000);
+                }
+                draw();
+            }
+            
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                for (let i = 0; i < 16; i++) {
+                    const cardX = (i % 4) * 140 + 20;
+                    const cardY = Math.floor(i / 4) * 90 + 20;
+                    if (x >= cardX && x <= cardX + 120 && y >= cardY && y <= cardY + 70) {
+                        flipCard(i);
+                        break;
+                    }
+                }
+            });
+            
+            draw();
+        }
+
+        function initPacman(canvas, ctx) {
+            const CELL_SIZE = 20;
+            const COLS = 30;
+            const ROWS = 20;
+            canvas.width = COLS * CELL_SIZE;
+            canvas.height = ROWS * CELL_SIZE;
+            
+            gameState = {
+                pacman: { x: 5, y: 5, direction: 'right' },
+                ghosts: [{ x: 25, y: 5, direction: 'left', color: '#ff0000' }],
+                dots: [], score: 0, gameOver: false
+            };
+            
+            for (let x = 2; x < COLS - 2; x += 3) {
+                for (let y = 2; y < ROWS - 2; y += 3) {
+                    gameState.dots.push({ x, y });
+                }
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffff00';
+                gameState.dots.forEach(dot => {
+                    ctx.beginPath();
+                    ctx.arc(dot.x * CELL_SIZE + CELL_SIZE/2, dot.y * CELL_SIZE + CELL_SIZE/2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(gameState.pacman.x * CELL_SIZE + CELL_SIZE/2, gameState.pacman.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                gameState.ghosts.forEach(ghost => {
+                    ctx.fillStyle = ghost.color;
+                    ctx.beginPath();
+                    ctx.arc(ghost.x * CELL_SIZE + CELL_SIZE/2, ghost.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            function update() {
+                if (gameState.gameOver) return;
+                
+                const directions = { 'up': {x:0,y:-1}, 'down': {x:0,y:1}, 'left': {x:-1,y:0}, 'right': {x:1,y:0} };
+                const dir = directions[gameState.pacman.direction];
+                const newX = gameState.pacman.x + dir.x;
+                const newY = gameState.pacman.y + dir.y;
+                
+                if (newX > 0 && newX < COLS - 1 && newY > 0 && newY < ROWS - 1) {
+                    gameState.pacman.x = newX;
+                    gameState.pacman.y = newY;
+                }
+                
+                const dotIndex = gameState.dots.findIndex(dot => dot.x === gameState.pacman.x && dot.y === gameState.pacman.y);
+                if (dotIndex !== -1) {
+                    gameState.dots.splice(dotIndex, 1);
+                    gameState.score += 10;
+                    updateScore(gameState.score);
+                    playSound(600, 0.05);
+                }
+                
+                gameState.ghosts.forEach(ghost => {
+                    const ghostDir = directions[ghost.direction];
+                    ghost.x += ghostDir.x;
+                    ghost.y += ghostDir.y;
+                    
+                    if (ghost.x <= 1 || ghost.x >= COLS - 2 || ghost.y <= 1 || ghost.y >= ROWS - 2) {
+                        ghost.direction = ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)];
+                    }
+                    
+                    if (ghost.x === gameState.pacman.x && ghost.y === gameState.pacman.y) {
+                        gameState.gameOver = true;
+                        showMessage('Oyun Bitti!', 'lose-message');
+                        clearInterval(gameInterval);
+                    }
+                });
+                
+                draw();
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                if (gameState.gameOver) return;
+                switch(e.key) {
+                    case 'ArrowUp': gameState.pacman.direction = 'up'; break;
+                    case 'ArrowDown': gameState.pacman.direction = 'down'; break;
+                    case 'ArrowLeft': gameState.pacman.direction = 'left'; break;
+                    case 'ArrowRight': gameState.pacman.direction = 'right'; break;
+                }
+            });
+            
+            draw();
+            gameInterval = setInterval(update, 200);
+        }
+
+        function initEndlessRunner(canvas, ctx) {
+            gameState = {
+                player: { x: 100, y: canvas.height - 60, width: 30, height: 50, velocityY: 0, onGround: true },
+                obstacles: [], score: 0, gameOver: false, speed: 3, keys: {}
+            };
+            
+            const GROUND_Y = canvas.height - 10;
+            
+            function createObstacle() {
+                gameState.obstacles.push({
+                    x: canvas.width, y: GROUND_Y - 30, width: 20, height: 30, passed: false
+                });
+            }
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(0, GROUND_Y, canvas.width, 10);
+                
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+                
+                ctx.fillStyle = '#8B4513';
+                gameState.obstacles.forEach(obstacle => {
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                });
+                
+                ctx.fillStyle = '#000';
+                ctx.font = '20px Arial';
+                ctx.fillText(`Skor: ${gameState.score}`, 10, 30);
+            }
+            
+            function update() {
+                if (gameState.gameOver) return;
+                
                 if (gameState.keys[' '] && gameState.player.onGround) {
-                    gameState.player.velocityY = JUMP_FORCE;
+                    gameState.player.velocityY = -12;
                     gameState.player.onGround = false;
                     playSound(400, 0.1);
                 }
                 
-                // Fizik
-                gameState.player.velocityY += GRAVITY;
+                gameState.player.velocityY += 0.8;
                 gameState.player.y += gameState.player.velocityY;
                 
-                // Zemin kontrolü
                 if (gameState.player.y >= GROUND_Y - gameState.player.height) {
                     gameState.player.y = GROUND_Y - gameState.player.height;
                     gameState.player.velocityY = 0;
                     gameState.player.onGround = true;
                 }
                 
-                // Arka plan hareket
-                gameState.background.x1 -= gameState.gameSpeed;
-                if (gameState.background.x1 <= -canvas.width) {
-                    gameState.background.x1 = 0;
-                }
+                if (Math.random() < 0.02) createObstacle();
                 
-                // Engel oluşturma
-                if (Math.random() < 0.02) {
-                    createObstacle();
-                }
-                
-                // Koleksiyon oluşturma
-                if (Math.random() < 0.005) {
-                    createCollectible();
-                }
-                
-                // Engelleri hareket ettir
                 gameState.obstacles.forEach((obstacle, index) => {
-                    obstacle.x -= gameState.gameSpeed;
+                    obstacle.x -= gameState.speed;
                     
-                    // Çarpışma kontrolü
-                    if (!obstacle.passed &&
-                        gameState.player.x < obstacle.x + obstacle.width &&
-                        gameState.player.x + gameState.player.width > obstacle.x &&
-                        gameState.player.y < obstacle.y + obstacle.height &&
-                        gameState.player.y + gameState.player.height > obstacle.y) {
-                        gameState.gameOver = true;
-                        showMessage(`${Math.floor(gameState.distance)}m koştun!`, 'lose-message');
-                        playSound(200, 0.5);
-                        return;
-                    }
-                    
-                    // Geçti mi kontrolü
                     if (!obstacle.passed && obstacle.x + obstacle.width < gameState.player.x) {
                         obstacle.passed = true;
                         gameState.score += 10;
@@ -2241,60 +1221,32 @@ draw();
                         playSound(600, 0.1);
                     }
                     
-                    // Ekrandan çıktı mı?
+                    if (gameState.player.x < obstacle.x + obstacle.width &&
+                        gameState.player.x + gameState.player.width > obstacle.x &&
+                        gameState.player.y < obstacle.y + obstacle.height &&
+                        gameState.player.y + gameState.player.height > obstacle.y) {
+                        gameState.gameOver = true;
+                        showMessage('Oyun Bitti!', 'lose-message');
+                        clearInterval(gameInterval);
+                    }
+                    
                     if (obstacle.x + obstacle.width < 0) {
                         gameState.obstacles.splice(index, 1);
                     }
                 });
                 
-                // Koleksiyonları hareket ettir
-                gameState.collectibles.forEach((collectible, index) => {
-                    collectible.x -= gameState.gameSpeed;
-                    
-                    // Toplama kontrolü
-                    if (!collectible.collected &&
-                        gameState.player.x < collectible.x + collectible.width &&
-                        gameState.player.x + gameState.player.width > collectible.x &&
-                        gameState.player.y < collectible.y + collectible.height &&
-                        gameState.player.y + gameState.player.height > collectible.y) {
-                        collectible.collected = true;
-                        gameState.score += 50;
-                        updateScore(gameState.score);
-                        playSound(800, 0.2);
-                    }
-                    
-                    // Ekrandan çıktı mı?
-                    if (collectible.x + collectible.width < 0) {
-                        gameState.collectibles.splice(index, 1);
-                    }
-                });
-                
+                gameState.speed += 0.001;
                 draw();
             }
             
-            function draw() {
-                drawBackground();
-                drawObstacles();
-                drawCollectibles();
-                drawPlayer();
-                drawUI();
-            }
+            document.addEventListener('keydown', (e) => { gameState.keys[e.key] = true; });
+            document.addEventListener('keyup', (e) => { gameState.keys[e.key] = false; });
             
-            // Kontroller
-            document.addEventListener('keydown', (e) => {
-                gameState.keys[e.key] = true;
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                gameState.keys[e.key] = false;
-            });
-            
-            // İlk çizim
             draw();
             gameInterval = setInterval(update, 16);
         }
 
-        // İlk yüklemede ana sayfayı göster
+        // Başlangıç
         showHome();
     </script>
 </body>
